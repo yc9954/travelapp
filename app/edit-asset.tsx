@@ -60,27 +60,10 @@ export default function EditAssetScreen() {
       width: 100vw;
       height: 100vh;
     }
-    #textOverlay {
-      position: absolute;
-      transform: translate(-50%, -50%);
-      padding: 16px 24px;
-      background: rgba(0, 0, 0, 0.7);
-      border-radius: 8px;
-      color: white;
-      font-size: 20px;
-      font-weight: 600;
-      text-align: center;
-      pointer-events: none;
-      display: none;
-      max-width: 80%;
-      word-wrap: break-word;
-      white-space: nowrap;
-    }
   </style>
 </head>
 <body>
   <canvas id="canvas"></canvas>
-  <div id="textOverlay"></div>
 
   <script type="importmap">
   {
@@ -93,12 +76,21 @@ export default function EditAssetScreen() {
   </script>
 
   <script type="module">
-    import { WebGLRenderer, PerspectiveCamera, Scene, Color, Vector3 } from 'three';
+    import {
+      WebGLRenderer,
+      PerspectiveCamera,
+      Scene,
+      Color,
+      Texture,
+      PlaneGeometry,
+      MeshStandardMaterial,
+      Mesh,
+      DoubleSide
+    } from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     import { LumaSplatsThree, LumaSplatsSemantics } from '@lumaai/luma-web';
 
     const canvas = document.getElementById('canvas');
-    const textOverlay = document.getElementById('textOverlay');
 
     const renderer = new WebGLRenderer({
       canvas: canvas,
@@ -110,7 +102,7 @@ export default function EditAssetScreen() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
     const scene = new Scene();
-    scene.background = new Color(0x000000);
+    scene.background = new Color('black');
 
     const camera = new PerspectiveCamera(
       75,
@@ -118,7 +110,7 @@ export default function EditAssetScreen() {
       0.1,
       1000
     );
-    camera.position.z = 2;
+    camera.position.set(0, 0, 2);
 
     const controls = new OrbitControls(camera, canvas);
     controls.enableDamping = true;
@@ -129,11 +121,7 @@ export default function EditAssetScreen() {
     let splat = null;
     let currentSource = '${isLuma ? captureUrl : ''}';
     let backgroundRemoved = false;
-
-    // 3D 공간에서 텍스트가 고정될 위치 (월드 좌표)
-    const labelPosition = new Vector3(0, 0, 0);
-    let textEnabled = false;
-    let currentTextPosition = 'center';
+    let textPlane = null;
 
     function loadSplat(source) {
       if (splat) {
@@ -148,7 +136,7 @@ export default function EditAssetScreen() {
 
       splat = new LumaSplatsThree({
         source: source,
-        loadingAnimationEnabled: true,
+        enableThreeShaderIntegration: false,
         particleRevealEnabled: true,
       });
 
@@ -160,6 +148,63 @@ export default function EditAssetScreen() {
       };
 
       scene.add(splat);
+    }
+
+    // DemoHelloWorld.ts 방식: Canvas + Texture로 3D Text Mesh 생성
+    function createText(text, position, color) {
+      // create canvas
+      const textCanvas = document.createElement('canvas');
+      const context = textCanvas.getContext('2d');
+      textCanvas.width = 1024;
+      textCanvas.height = 512;
+
+      // clear white, 0 alpha
+      context.fillStyle = 'rgba(255, 255, 255, 0)';
+      context.fillRect(0, 0, textCanvas.width, textCanvas.height);
+
+      // draw text
+      context.fillStyle = color || 'white';
+      context.font = '200px sans-serif';
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      // stroke
+      context.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+      context.lineWidth = 5;
+      context.fillText(text, textCanvas.width / 2, textCanvas.height / 2);
+      context.strokeText(text, textCanvas.width / 2, textCanvas.height / 2);
+
+      // create texture from canvas
+      const texture = new Texture(textCanvas);
+      texture.needsUpdate = true;
+
+      // create plane geometry and mesh with the texture
+      const geometry = new PlaneGeometry(5, 2.5);
+      const material = new MeshStandardMaterial({
+        map: texture,
+        transparent: false,
+        alphaTest: 0.5,
+        side: DoubleSide,
+        premultipliedAlpha: true,
+        emissive: color || 'white',
+        emissiveIntensity: 2,
+      });
+      const textPlane = new Mesh(geometry, material);
+
+      // position and rotate based on user selection
+      let yPos = -0.9;
+      if (position === 'top') {
+        yPos = 0.9;
+      } else if (position === 'center') {
+        yPos = 0;
+      } else if (position === 'bottom') {
+        yPos = -0.9;
+      }
+
+      textPlane.position.set(0.8, yPos, 0);
+      textPlane.rotation.y = Math.PI / 2;
+      textPlane.scale.setScalar(0.6);
+
+      return textPlane;
     }
 
     // 배경 제거 토글
@@ -180,38 +225,21 @@ export default function EditAssetScreen() {
       }));
     };
 
-    // 3D 좌표를 화면 좌표로 투영하여 HTML 위치 업데이트
-    function updateLabelPosition() {
-      if (!textEnabled) return;
-
-      // 3D 월드 좌표를 카메라 기준으로 투영
-      const projected = labelPosition.clone();
-      projected.project(camera);
-
-      // NDC 좌표 (-1 ~ 1)를 화면 픽셀 좌표로 변환
-      const x = (projected.x * 0.5 + 0.5) * window.innerWidth;
-      const y = (-projected.y * 0.5 + 0.5) * window.innerHeight;
-
-      // HTML 요소 위치 업데이트
-      textOverlay.style.left = \`\${x}px\`;
-      textOverlay.style.top = \`\${y}px\`;
-    }
-
-    // 텍스트 오버레이 업데이트
+    // 텍스트 Mesh 업데이트 (Luma 공식 방식)
     window.updateTextOverlay = function(text, position, color) {
-      textOverlay.textContent = text;
-      textOverlay.style.color = color;
-      textOverlay.style.display = text ? 'block' : 'none';
-      textEnabled = !!text;
-      currentTextPosition = position;
+      // 기존 텍스트 Mesh 제거
+      if (textPlane) {
+        scene.remove(textPlane);
+        textPlane.geometry.dispose();
+        textPlane.material.dispose();
+        textPlane.material.map?.dispose();
+        textPlane = null;
+      }
 
-      // position에 따라 3D 공간에서의 위치 조정
-      if (position === 'top') {
-        labelPosition.set(0, 0.5, 0);
-      } else if (position === 'bottom') {
-        labelPosition.set(0, -0.5, 0);
-      } else {
-        labelPosition.set(0, 0, 0);
+      // 새 텍스트가 있으면 3D Mesh 생성 및 추가
+      if (text) {
+        textPlane = createText(text, position, color);
+        scene.add(textPlane);
       }
 
       window.ReactNativeWebView?.postMessage(JSON.stringify({
@@ -229,7 +257,6 @@ export default function EditAssetScreen() {
     function animate() {
       requestAnimationFrame(animate);
       controls.update();
-      updateLabelPosition(); // 매 프레임마다 텍스트 위치 업데이트
       renderer.render(scene, camera);
     }
     animate();
