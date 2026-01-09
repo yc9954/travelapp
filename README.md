@@ -1,10 +1,18 @@
 # TravelSpace 3D
 
-여행 사진을 3D로 변환하여 공유하는 소셜 미디어 앱
+가우시안 스플래팅(Gaussian Splatting)으로 만들어진 3D 에셋을 공유하는 소셜 미디어 앱
 
 ## 프로젝트 컨셉
 
-일반적인 2D 사진이 아닌, 3D로 변환된 여행 사진을 올리고 공유할 수 있는 여행 전문 SNS입니다. 사용자는 자신의 여행 사진을 3D로 바꿔서 더 생생하고 입체적인 추억을 다른 사람들과 나눌 수 있습니다.
+일반적인 2D 사진이 아닌, **Luma AI의 가우시안 스플래팅 기술**로 제작된 실감나는 3D 에셋을 공유하는 전문 SNS입니다. 사용자는 자신의 여행 경험을 고품질 3D로 기록하고, 다른 사람들과 생생한 추억을 나눌 수 있습니다.
+
+### 가우시안 스플래팅이란?
+
+가우시안 스플래팅(Gaussian Splatting)은 NeRF(Neural Radiance Fields)를 대체하는 차세대 3D 재구성 기술로, 다음과 같은 장점이 있습니다:
+- **빠른 렌더링**: 브라우저와 모바일에서도 실시간 렌더링 가능
+- **고품질**: 사진처럼 사실적인 3D 표현
+- **효율적 파일 크기**: 8-20MB 스트리밍 파일
+- **범용 호환성**: WebGL 기반으로 어디서나 실행 가능
 
 ## 주요 기능
 
@@ -41,7 +49,32 @@
 - **HTTP 클라이언트**: Axios
 - **이미지 처리**: Expo Image Picker
 - **스토리지**: AsyncStorage
+- **3D 렌더링**: Luma Web Library (@lumaai/luma-web)
+- **WebGL**: Three.js (^0.157.0)
 - **3D 변환**: Luma AI API
+
+### Luma Web Library
+
+이 프로젝트는 [Luma Labs의 공식 Web Library](https://github.com/lumalabs/luma-web-examples)를 사용하여 가우시안 스플래팅 에셋을 렌더링합니다.
+
+**주요 기능:**
+- WebGL 기반 가우시안 스플래팅 렌더링
+- Three.js 통합 지원
+- 고성능 실시간 렌더링
+- 배경 제거 및 시맨틱 레이어 필터링
+- 커스텀 GLSL 셰이더 지원
+
+**CDN 사용:**
+```html
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
+    "@lumaai/luma-web": "https://unpkg.com/@lumaai/luma-web@0.2.0/dist/library/luma-web.module.js"
+  }
+}
+</script>
+```
 
 ## 프로젝트 구조
 
@@ -95,11 +128,18 @@ const USE_MOCK_LUMA = true;  // Mock 3D 변환 활성화
 ```
 
 **Mock 모드 기능:**
-- 더미 데이터로 피드 표시
+- 더미 데이터로 피드 표시 (실제 존재하는 Luma 가우시안 스플래팅 에셋 사용)
 - 어떤 이메일/비밀번호든 로그인 가능
 - 회원가입 즉시 완료
 - 좋아요, 게시물 업로드 등 모든 기능 작동
 - 3D 변환 시뮬레이션 (3초 후 완료)
+
+**Mock 데이터에 사용된 실제 Luma Capture URLs:**
+- `https://lumalabs.ai/capture/4da7cf32-865a-4515-8cb9-9dfc574c90c2`
+- `https://lumalabs.ai/capture/ca9ea966-ca24-4ec1-ab0f-af665cb546ff`
+- `https://lumalabs.ai/capture/d80d4876-cf71-4b8a-8b5b-49ffac44cd4a`
+- `https://lumalabs.ai/capture/1b5f3e33-3900-4398-8795-b585ae13fd2d`
+- `https://lumalabs.ai/capture/b86b7928-f130-40a5-8cac-8095f30eed54`
 
 #### 실제 API 모드
 백엔드 서버를 연동하려면:
@@ -146,6 +186,9 @@ npx expo start
 - `@react-native-async-storage/async-storage`: 로컬 저장소
 - `axios`: HTTP 클라이언트
 - `@expo/vector-icons`: 아이콘
+- `@lumaai/luma-web`: Luma 가우시안 스플래팅 렌더링
+- `three`: WebGL 3D 라이브러리
+- `react-native-webview`: WebView를 통한 3D 에셋 표시
 
 ## API 명세
 

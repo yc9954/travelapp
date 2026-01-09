@@ -39,6 +39,7 @@ export const mockUsers: User[] = [
 
 // Mock 게시물 데이터
 // Luma AI capture URL 형식: https://lumalabs.ai/capture/{uuid}
+// 실제 존재하는 Luma Gaussian Splatting 에셋 사용
 export const mockPosts: Post[] = [
   {
     id: '1',
@@ -74,7 +75,7 @@ export const mockPosts: Post[] = [
     userId: '2',
     user: mockUsers[1],
     imageUrl: 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=800',
-    image3dUrl: 'https://lumalabs.ai/capture/a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    image3dUrl: 'https://lumalabs.ai/capture/ca9ea966-ca24-4ec1-ab0f-af665cb546ff',
     is3D: true,
     caption: '일본 후지산의 위엄! 🗻 3D로 보니 더 실감나네요',
     location: '후지산, 일본',
@@ -89,7 +90,7 @@ export const mockPosts: Post[] = [
     userId: '3',
     user: mockUsers[2],
     imageUrl: 'https://images.unsplash.com/photo-1523482580672-f109ba8cb9be?w=800',
-    image3dUrl: 'https://lumalabs.ai/capture/b2c3d4e5-f6a7-8901-bcde-f12345678901',
+    image3dUrl: 'https://lumalabs.ai/capture/d80d4876-cf71-4b8a-8b5b-49ffac44cd4a',
     is3D: true,
     caption: '뉴욕 타임스퀘어의 밤 🌃 정말 눈부셨어요',
     location: '뉴욕, 미국',
@@ -104,7 +105,7 @@ export const mockPosts: Post[] = [
     userId: '2',
     user: mockUsers[1],
     imageUrl: 'https://images.unsplash.com/photo-1588668214407-6ea9a6d8c272?w=800',
-    image3dUrl: 'https://lumalabs.ai/capture/c3d4e5f6-a7b8-9012-cdef-123456789012',
+    image3dUrl: 'https://lumalabs.ai/capture/1b5f3e33-3900-4398-8795-b585ae13fd2d',
     is3D: true,
     caption: '페트라의 신전, 역사의 숨결이 느껴지는 곳 🏛️',
     location: '페트라, 요르단',
@@ -119,7 +120,7 @@ export const mockPosts: Post[] = [
     userId: '3',
     user: mockUsers[2],
     imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800',
-    image3dUrl: 'https://lumalabs.ai/capture/d4e5f6a7-b8c9-0123-def0-234567890123',
+    image3dUrl: 'https://lumalabs.ai/capture/b86b7928-f130-40a5-8cac-8095f30eed54',
     is3D: true,
     caption: '노르웨이의 피요르드 🏔️ 자연의 경이로움',
     location: '노르웨이',
@@ -134,7 +135,7 @@ export const mockPosts: Post[] = [
     userId: '1',
     user: mockUsers[0],
     imageUrl: 'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=800',
-    image3dUrl: 'https://lumalabs.ai/capture/e5f6a7b8-c9d0-1234-ef01-345678901234',
+    image3dUrl: 'https://lumalabs.ai/capture/4da7cf32-865a-4515-8cb9-9dfc574c90c2',
     is3D: true,
     caption: '스위스 알프스의 설원 ❄️ 눈 덮인 산들이 장관이에요',
     location: '스위스',
@@ -149,7 +150,7 @@ export const mockPosts: Post[] = [
     userId: '2',
     user: mockUsers[1],
     imageUrl: 'https://images.unsplash.com/photo-1539037116277-4db20889f2d4?w=800',
-    image3dUrl: 'https://lumalabs.ai/capture/f6a7b8c9-d0e1-2345-f012-456789012345',
+    image3dUrl: 'https://lumalabs.ai/capture/ca9ea966-ca24-4ec1-ab0f-af665cb546ff',
     is3D: true,
     caption: '이탈리아 베네치아의 운하 🚤 물 위의 도시',
     location: '베네치아, 이탈리아',
