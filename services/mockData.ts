@@ -6,8 +6,8 @@ export const mockUsers: User[] = [
     id: '1',
     email: 'test@example.com',
     username: 'traveler123',
-    profileImage: 'https://i.pravatar.cc/150?u=1',
-    bio: '세계 여행을 사랑하는 여행자',
+    profileImage: 'https://cdn-luma.com/c5464e01c904a033180b9f87ba7e61fe363ab854a8842a9f66dbb99cffc4dc95/Arosa_Hörnli_Switzerland_thumb.jpg',
+    bio: '가우시안 스플래팅으로 세상을 기록합니다 ✨',
     followersCount: 1234,
     followingCount: 567,
     postsCount: 42,
@@ -17,8 +17,8 @@ export const mockUsers: User[] = [
     id: '2',
     email: 'user2@example.com',
     username: 'worldexplorer',
-    profileImage: 'https://i.pravatar.cc/150?u=2',
-    bio: '🌍 전 세계를 탐험 중',
+    profileImage: 'https://cdn-luma.com/dae39f9834ce5ff37efd798c27669caad8f67969a188f74a2e387607773b3fa9/MIT_WPU_Globe_thumb.jpg',
+    bio: '🌍 3D로 여행을 공유하는 크리에이터',
     followersCount: 5678,
     followingCount: 890,
     postsCount: 128,
@@ -28,8 +28,8 @@ export const mockUsers: User[] = [
     id: '3',
     email: 'user3@example.com',
     username: 'photographer',
-    profileImage: 'https://i.pravatar.cc/150?u=3',
-    bio: '📸 여행 사진작가',
+    profileImage: 'https://cdn-luma.com/998f66a10b35ecdc8ff532714eccd37ef567ba190b6b9a45833975e5b48fdf05/Dandelion_thumb.jpg',
+    bio: '📸 가우시안 스플래팅 아티스트',
     followersCount: 9876,
     followingCount: 234,
     postsCount: 256,
@@ -60,11 +60,11 @@ export const mockPosts: Post[] = [
     id: '2',
     userId: '3',
     user: mockUsers[2],
-    imageUrl: 'https://images.unsplash.com/photo-1613395877344-13d4a8e0d49e?w=800',
+    imageUrl: 'https://cdn-luma.com/76c1aafa17eb1377ff6cc9b8a246d58181a316bb0e33592dd1f657aaa0448ecd/Nebula_Gaussian_Splatting_thumb.jpg',
     is3D: false,
-    caption: '산토리니의 아름다운 블루돔 💙 꿈같은 풍경',
-    location: '산토리니, 그리스',
-    hashtags: ['산토리니', '그리스', '지중해', '여행'],
+    caption: '2D 이미지도 공유할 수 있어요 💙 3D로 변환해보세요!',
+    location: 'Digital Space',
+    hashtags: ['디지털아트', '성운', '우주'],
     likesCount: 2345,
     commentsCount: 89,
     isLiked: true,
@@ -162,6 +162,40 @@ export const mockPosts: Post[] = [
   },
 ];
 
+// Luma 데이터셋 갤러리 (업로드 화면용)
+export const lumaGalleryAssets = [
+  {
+    id: 'luma-1',
+    name: 'Arosa Alps Switzerland',
+    thumbnail: 'https://cdn-luma.com/c5464e01c904a033180b9f87ba7e61fe363ab854a8842a9f66dbb99cffc4dc95/Arosa_Hörnli_Switzerland_thumb.jpg',
+    captureUrl: 'https://lumalabs.ai/capture/4da7cf32-865a-4515-8cb9-9dfc574c90c2',
+  },
+  {
+    id: 'luma-2',
+    name: 'MIT WPU Globe',
+    thumbnail: 'https://cdn-luma.com/dae39f9834ce5ff37efd798c27669caad8f67969a188f74a2e387607773b3fa9/MIT_WPU_Globe_thumb.jpg',
+    captureUrl: 'https://lumalabs.ai/capture/ca9ea966-ca24-4ec1-ab0f-af665cb546ff',
+  },
+  {
+    id: 'luma-3',
+    name: 'Dandelion Macro',
+    thumbnail: 'https://cdn-luma.com/998f66a10b35ecdc8ff532714eccd37ef567ba190b6b9a45833975e5b48fdf05/Dandelion_thumb.jpg',
+    captureUrl: 'https://lumalabs.ai/capture/d80d4876-cf71-4b8a-8b5b-49ffac44cd4a',
+  },
+  {
+    id: 'luma-4',
+    name: 'Jules Desbois Sculpture',
+    thumbnail: 'https://cdn-luma.com/77b06b20dd103ee39f6c8fb54768068ce4f043c8f1cc238d563abe7e5c7a4a84/Jules_Desbois_La_Femme_l_thumb.jpg',
+    captureUrl: 'https://lumalabs.ai/capture/1b5f3e33-3900-4398-8795-b585ae13fd2d',
+  },
+  {
+    id: 'luma-5',
+    name: 'Nebula Gaussian Splatting',
+    thumbnail: 'https://cdn-luma.com/76c1aafa17eb1377ff6cc9b8a246d58181a316bb0e33592dd1f657aaa0448ecd/Nebula_Gaussian_Splatting_thumb.jpg',
+    captureUrl: 'https://lumalabs.ai/capture/b86b7928-f130-40a5-8cac-8095f30eed54',
+  },
+];
+
 // Mock 인증 응답 생성 함수
 export function createMockAuthResponse(email: string, username: string) {
   return {
@@ -169,8 +203,8 @@ export function createMockAuthResponse(email: string, username: string) {
       id: '1',
       email,
       username,
-      profileImage: 'https://i.pravatar.cc/150?u=mock',
-      bio: '여행을 사랑하는 사람',
+      profileImage: 'https://cdn-luma.com/c5464e01c904a033180b9f87ba7e61fe363ab854a8842a9f66dbb99cffc4dc95/Arosa_Hörnli_Switzerland_thumb.jpg',
+      bio: '가우시안 스플래팅을 사랑하는 사람',
       followersCount: 0,
       followingCount: 0,
       postsCount: 0,
