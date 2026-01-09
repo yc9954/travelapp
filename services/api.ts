@@ -8,6 +8,7 @@ import type {
   Post,
   User,
   CreatePostRequest,
+  Comment,
 } from '../types';
 
 // Mock 모드 활성화 (백엔드 없이 테스트하려면 true로 설정)
@@ -177,6 +178,61 @@ class ApiService {
     });
 
     return response.data.url;
+  }
+
+  async getComments(postId: string): Promise<Comment[]> {
+    if (USE_MOCK_API) {
+      await delay(500);
+      // Mock 댓글 데이터 생성
+      const post = this.mockPosts.find(p => p.id === postId);
+      if (!post) return [];
+
+      const mockComments: Comment[] = [];
+      const commentCount = Math.min(post.commentsCount, 10); // 최대 10개만 반환
+
+      for (let i = 0; i < commentCount; i++) {
+        const randomUser = mockUsers[Math.floor(Math.random() * mockUsers.length)];
+        mockComments.push({
+          id: `comment_${postId}_${i}`,
+          postId,
+          userId: randomUser.id,
+          user: randomUser,
+          content: `이것은 ${i + 1}번째 댓글입니다. 정말 멋진 에셋이네요!`,
+          createdAt: new Date(Date.now() - (i * 3600000)).toISOString(),
+        });
+      }
+
+      return mockComments.sort((a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    }
+    const response = await this.client.get<Comment[]>(`/posts/${postId}/comments`);
+    return response.data;
+  }
+
+  async createComment(postId: string, content: string): Promise<Comment> {
+    if (USE_MOCK_API) {
+      await delay(500);
+      const userData = await StorageService.getUserData();
+      const post = this.mockPosts.find(p => p.id === postId);
+
+      if (post) {
+        post.commentsCount++;
+      }
+
+      const newComment: Comment = {
+        id: `comment_${postId}_${Date.now()}`,
+        postId,
+        userId: userData?.id || '1',
+        user: userData || mockUsers[0],
+        content,
+        createdAt: new Date().toISOString(),
+      };
+
+      return newComment;
+    }
+    const response = await this.client.post<Comment>(`/posts/${postId}/comments`, { content });
+    return response.data;
   }
 }
 
