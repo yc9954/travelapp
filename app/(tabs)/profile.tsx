@@ -61,7 +61,7 @@ export default function ProfileScreen() {
   const renderPost = ({ item }: { item: Post }) => (
     <View style={styles.gridItem}>
       <Image
-        source={{ uri: item.is3D ? item.image3dUrl : item.imageUrl }}
+        source={{ uri: item.imageUrl }}
         style={styles.gridImage}
       />
       {item.is3D && (
