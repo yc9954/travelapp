@@ -20,7 +20,7 @@ export default function TabLayout() {
           shadowOpacity: 0,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: '600',
           marginTop: 4,
         },
@@ -32,10 +32,16 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "home" : "home-outline"}
-              size={28}
+              size={24}
               color={color}
             />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="explore"
+        options={{
+          href: null,
         }}
       />
       <Tabs.Screen
@@ -63,20 +69,33 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="search"
         options={{
-          title: 'Profile',
+          title: 'Search',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? "person" : "person-outline"}
-              size={28}
+              name={focused ? "search" : "search-outline"}
+              size={24}
               color={color}
             />
           ),
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="travel"
+        options={{
+          title: 'Travel',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "airplane" : "airplane-outline"}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
         options={{
           href: null,
         }}
