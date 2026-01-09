@@ -83,7 +83,7 @@ export default function FeedScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>TravelSpace 3D</Text>
+        <Text style={styles.headerTitle}>SplatSpace</Text>
       </View>
       <FlatList
         data={posts}
