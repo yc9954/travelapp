@@ -1,25 +1,33 @@
 {
   "expo": {
-    "name": "test-app",
-    "slug": "test-app",
+    "name": "TravelSpace 3D",
+    "slug": "travelspace-3d",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "testapp",
+    "scheme": "travelspace3d",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.travelspace3d.app"
     },
     "android": {
+      "package": "com.travelspace3d.app",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#6366F1",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES"
+      ]
     },
     "web": {
       "output": "static",
@@ -33,10 +41,17 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#6366F1",
           "dark": {
-            "backgroundColor": "#000000"
+            "backgroundColor": "#1e1b4b"
           }
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "앱에서 여행 사진을 선택하고 3D로 변환하기 위해 사진 접근 권한이 필요합니다.",
+          "cameraPermission": "여행 사진을 촬영하기 위해 카메라 권한이 필요합니다."
         }
       ]
     ],
