@@ -77,9 +77,9 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>프로필</Text>
+        <Text style={styles.headerTitle}>Profile</Text>
         <TouchableOpacity onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={24} color="#1F2937" />
+          <Ionicons name="log-out-outline" size={24} color="#F3F4F6" />
         </TouchableOpacity>
       </View>
 
@@ -125,11 +125,11 @@ export default function ProfileScreen() {
         ListEmptyComponent={
           isLoading ? (
             <View style={styles.centerContainer}>
-              <ActivityIndicator size="large" color="#6366F1" />
+              <ActivityIndicator size="large" color="#60A5FA" />
             </View>
           ) : (
             <View style={styles.emptyContainer}>
-              <Ionicons name="images-outline" size={64} color="#9CA3AF" />
+              <Ionicons name="images-outline" size={64} color="#6B7280" />
               <Text style={styles.emptyText}>아직 게시물이 없습니다</Text>
               <TouchableOpacity
                 style={styles.uploadButton}
@@ -148,14 +148,14 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#0F172A',
   },
   header: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1E293B',
     paddingVertical: 16,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: '#334155',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -163,30 +163,32 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: '#F3F4F6',
   },
   profileHeader: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1E293B',
     padding: 24,
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: '#334155',
   },
   profileImage: {
     width: 100,
     height: 100,
     borderRadius: 50,
     marginBottom: 16,
+    borderWidth: 3,
+    borderColor: '#60A5FA',
   },
   username: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: '#F3F4F6',
     marginBottom: 8,
   },
   bio: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#94A3B8',
     textAlign: 'center',
     marginBottom: 16,
   },
@@ -201,35 +203,37 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: '#F3F4F6',
   },
   statLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#94A3B8',
     marginTop: 4,
   },
   editButton: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: 'rgba(96, 165, 250, 0.1)',
     paddingHorizontal: 32,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: 12,
     marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(96, 165, 250, 0.3)',
   },
   editButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#60A5FA',
   },
   sectionHeader: {
     width: '100%',
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: '#334155',
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#F3F4F6',
   },
   listContent: {
     flexGrow: 1,
@@ -243,7 +247,7 @@ const styles = StyleSheet.create({
   gridImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#1E293B',
   },
   gridBadge: {
     position: 'absolute',
@@ -273,12 +277,12 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: '#94A3B8',
     marginTop: 16,
     marginBottom: 24,
   },
   uploadButton: {
-    backgroundColor: '#6366F1',
+    backgroundColor: '#3B82F6',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,

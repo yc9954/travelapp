@@ -108,7 +108,7 @@ export default function UploadScreen() {
         <Image source={{ uri: item.thumbnail }} style={styles.lumaAssetImage} />
         {isSelected && (
           <View style={styles.selectedOverlay}>
-            <Ionicons name="checkmark-circle" size={32} color="#6366F1" />
+            <Ionicons name="checkmark-circle" size={32} color="#60A5FA" />
           </View>
         )}
         <View style={styles.lumaBadge}>
@@ -121,7 +121,7 @@ export default function UploadScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>새 게시물</Text>
+        <Text style={styles.headerTitle}>Upload</Text>
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
@@ -135,7 +135,7 @@ export default function UploadScreen() {
           <View style={styles.optionsGrid}>
             <TouchableOpacity style={styles.optionCard} onPress={() => setShowLumaGallery(true)}>
               <View style={styles.optionIconContainer}>
-                <Ionicons name="cube-outline" size={48} color="#6366F1" />
+                <Ionicons name="cube-outline" size={48} color="#60A5FA" />
               </View>
               <Text style={styles.optionTitle}>Luma 갤러리</Text>
               <Text style={styles.optionDescription}>
@@ -145,7 +145,7 @@ export default function UploadScreen() {
 
             <TouchableOpacity style={styles.optionCard} onPress={takePhoto}>
               <View style={styles.optionIconContainer}>
-                <Ionicons name="camera" size={48} color="#10B981" />
+                <Ionicons name="camera" size={48} color="#34D399" />
               </View>
               <Text style={styles.optionTitle}>촬영하기</Text>
               <Text style={styles.optionDescription}>
@@ -155,7 +155,7 @@ export default function UploadScreen() {
 
             <TouchableOpacity style={styles.optionCard} onPress={pickImage}>
               <View style={styles.optionIconContainer}>
-                <Ionicons name="images" size={48} color="#F59E0B" />
+                <Ionicons name="images" size={48} color="#FBBF24" />
               </View>
               <Text style={styles.optionTitle}>갤러리</Text>
               <Text style={styles.optionDescription}>
@@ -171,7 +171,7 @@ export default function UploadScreen() {
 
           <View style={styles.featureCard}>
             <View style={styles.featureIcon}>
-              <Ionicons name="layers-outline" size={24} color="#6366F1" />
+              <Ionicons name="layers-outline" size={24} color="#60A5FA" />
             </View>
             <View style={styles.featureContent}>
               <Text style={styles.featureTitle}>배경 제거</Text>
@@ -183,7 +183,7 @@ export default function UploadScreen() {
 
           <View style={styles.featureCard}>
             <View style={styles.featureIcon}>
-              <Ionicons name="text-outline" size={24} color="#6366F1" />
+              <Ionicons name="text-outline" size={24} color="#60A5FA" />
             </View>
             <View style={styles.featureContent}>
               <Text style={styles.featureTitle}>텍스트 오버레이</Text>
@@ -195,7 +195,7 @@ export default function UploadScreen() {
 
           <View style={styles.featureCard}>
             <View style={styles.featureIcon}>
-              <Ionicons name="color-palette-outline" size={24} color="#6366F1" />
+              <Ionicons name="color-palette-outline" size={24} color="#60A5FA" />
             </View>
             <View style={styles.featureContent}>
               <Text style={styles.featureTitle}>커스텀 셰이더</Text>
@@ -218,7 +218,7 @@ export default function UploadScreen() {
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Luma 갤러리</Text>
             <TouchableOpacity onPress={() => setShowLumaGallery(false)}>
-              <Ionicons name="close" size={24} color="#1F2937" />
+              <Ionicons name="close" size={24} color="#F3F4F6" />
             </TouchableOpacity>
           </View>
 
@@ -262,19 +262,19 @@ export default function UploadScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#0F172A',
   },
   header: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1E293B',
     paddingVertical: 16,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: '#334155',
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: '#F3F4F6',
   },
   content: {
     flex: 1,
@@ -288,24 +288,24 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: '#F3F4F6',
     marginBottom: 8,
   },
   sectionDescription: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#94A3B8',
     marginBottom: 16,
   },
   optionsGrid: {
     gap: 16,
   },
   optionCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1E293B',
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: '#334155',
   },
   optionIconContainer: {
     marginBottom: 12,
@@ -313,12 +313,12 @@ const styles = StyleSheet.create({
   optionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#F3F4F6',
     marginBottom: 4,
   },
   optionDescription: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#94A3B8',
     textAlign: 'center',
   },
   featuresSection: {
@@ -327,22 +327,24 @@ const styles = StyleSheet.create({
   featuresTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: '#F3F4F6',
     marginBottom: 16,
   },
   featureCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1E293B',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
   },
   featureIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: 'rgba(96, 165, 250, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -353,16 +355,16 @@ const styles = StyleSheet.create({
   featureTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#F3F4F6',
     marginBottom: 2,
   },
   featureDescription: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#94A3B8',
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0F172A',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -371,19 +373,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: '#334155',
+    backgroundColor: '#1E293B',
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: '#F3F4F6',
   },
   modalContent: {
     flex: 1,
   },
   galleryDescription: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#94A3B8',
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
@@ -400,7 +403,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 12,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#1E293B',
   },
   selectedOverlay: {
     position: 'absolute',
@@ -408,12 +411,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    backgroundColor: 'rgba(96, 165, 250, 0.2)',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: '#6366F1',
+    borderColor: '#60A5FA',
   },
   lumaBadge: {
     position: 'absolute',
@@ -432,8 +435,8 @@ const styles = StyleSheet.create({
   modalActions: {
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
+    borderTopColor: '#334155',
+    backgroundColor: '#1E293B',
   },
   selectedInfo: {
     marginBottom: 12,
@@ -441,20 +444,20 @@ const styles = StyleSheet.create({
   selectedInfoTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#F3F4F6',
   },
   selectedInfoSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#94A3B8',
   },
   selectButton: {
-    backgroundColor: '#6366F1',
+    backgroundColor: '#3B82F6',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
   },
   selectButtonDisabled: {
-    backgroundColor: '#9CA3AF',
+    backgroundColor: '#475569',
   },
   selectButtonText: {
     color: '#FFFFFF',

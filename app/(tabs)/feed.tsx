@@ -3,20 +3,19 @@ import {
   View,
   FlatList,
   StyleSheet,
-  RefreshControl,
   ActivityIndicator,
-  Text,
+  Dimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { PostCard } from '../../components/PostCard';
+import { FullScreenPostCard } from '../../components/FullScreenPostCard';
 import { api } from '../../services/api';
 import type { Post } from '../../types';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function FeedScreen() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     loadFeed();
@@ -30,13 +29,7 @@ export default function FeedScreen() {
       console.error('Failed to load feed:', error);
     } finally {
       setIsLoading(false);
-      setIsRefreshing(false);
     }
-  };
-
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    loadFeed();
   };
 
   const handleLike = async (postId: string) => {
@@ -68,71 +61,53 @@ export default function FeedScreen() {
     console.log('Open comments for post:', postId);
   };
 
-  const handleViewPost = (postId: string) => {
+  const handleViewDetails = (postId: string) => {
     router.push(`/asset-viewer?postId=${postId}`);
   };
 
   if (isLoading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#6366F1" />
+        <ActivityIndicator size="large" color="#60A5FA" />
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>SplatSpace</Text>
-      </View>
+    <View style={styles.container}>
       <FlatList
         data={posts}
         renderItem={({ item }) => (
-          <PostCard
+          <FullScreenPostCard
             post={item}
             onLike={handleLike}
             onComment={handleComment}
-            onViewPost={handleViewPost}
+            onViewDetails={handleViewDetails}
           />
         )}
         keyExtractor={(item) => item.id}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            tintColor="#6366F1"
-          />
-        }
+        pagingEnabled
+        snapToInterval={SCREEN_HEIGHT}
+        decelerationRate="fast"
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#000000',
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-  },
-  header: {
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1F2937',
+    backgroundColor: '#000000',
   },
   listContent: {
-    paddingVertical: 8,
+    flexGrow: 1,
   },
 });
