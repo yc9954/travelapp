@@ -74,7 +74,7 @@ export default function UploadScreen() {
     try {
       const uploadedUrl = await api.uploadImage(imageUri);
       const { taskId } = await lumaService.convertTo3D(uploadedUrl);
-      const image3dUrl = await lumaService.waitForConversion(taskId);
+      const image3dUrl = await lumaService.waitForConversion(taskId, 30, uploadedUrl);
 
       setImageUri(image3dUrl);
       setIs3D(true);

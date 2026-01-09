@@ -77,18 +77,47 @@ travelapp/
 npm install
 ```
 
-### 2. 환경 변수 설정
+### 2. Mock 모드 vs 실제 API 모드
 
-`services/luma.ts` 파일에서 Luma API 키를 설정하세요:
+**현재 기본 설정: Mock 모드 (백엔드 없이 바로 테스트 가능)**
 
+#### Mock 모드 (기본값)
+백엔드 API 없이도 앱을 바로 실행하고 테스트할 수 있습니다!
+
+`services/api.ts`:
 ```typescript
-const LUMA_API_KEY = 'your_luma_api_key_here';
+const USE_MOCK_API = true;  // Mock 모드 활성화
 ```
 
-`services/api.ts` 파일에서 백엔드 API URL을 설정하세요:
+`services/luma.ts`:
+```typescript
+const USE_MOCK_LUMA = true;  // Mock 3D 변환 활성화
+```
 
+**Mock 모드 기능:**
+- 더미 데이터로 피드 표시
+- 어떤 이메일/비밀번호든 로그인 가능
+- 회원가입 즉시 완료
+- 좋아요, 게시물 업로드 등 모든 기능 작동
+- 3D 변환 시뮬레이션 (3초 후 완료)
+
+#### 실제 API 모드
+백엔드 서버를 연동하려면:
+
+1. `services/api.ts`에서 Mock 모드 비활성화:
+```typescript
+const USE_MOCK_API = false;
+```
+
+2. API URL 설정:
 ```typescript
 const API_BASE_URL = 'https://your-api-url.com/api';
+```
+
+3. `services/luma.ts`에서 Luma API 설정:
+```typescript
+const USE_MOCK_LUMA = false;
+const LUMA_API_KEY = 'your_luma_api_key_here';
 ```
 
 ### 3. 앱 실행
