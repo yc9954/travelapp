@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Image,
   ScrollView,
   Alert,
   ActivityIndicator,
@@ -13,47 +12,232 @@ import {
   FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { api } from '../services/api';
-import { lumaService } from '../services/luma';
 
 type EditMode = 'none' | 'removeBackground' | 'addText';
 
 export default function EditAssetScreen() {
   const params = useLocalSearchParams<{ imageUrl?: string; captureUrl?: string; isLuma?: string }>();
-  const [imageUrl, setImageUrl] = useState(params.imageUrl || '');
-  const [captureUrl, setCaptureUrl] = useState(params.captureUrl || '');
+  const webViewRef = useRef<WebView>(null);
+
+  const [imageUrl] = useState(params.imageUrl || '');
+  const [captureUrl] = useState(params.captureUrl || '');
   const [isLuma] = useState(params.isLuma === 'true');
 
   const [caption, setCaption] = useState('');
   const [location, setLocation] = useState('');
   const [hashtags, setHashtags] = useState('');
-  const [editMode, setEditMode] = useState<EditMode>('none');
 
   // 편집 옵션
   const [removeBackground, setRemoveBackground] = useState(false);
   const [textOverlay, setTextOverlay] = useState('');
   const [textPosition, setTextPosition] = useState<'top' | 'center' | 'bottom'>('center');
+  const [textColor, setTextColor] = useState('#ffffff');
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [showEditMenu, setShowEditMenu] = useState(false);
 
-  const handleRemoveBackground = async () => {
-    setIsProcessing(true);
-    try {
-      // Luma API를 통한 배경 제거 (시뮬레이션)
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setRemoveBackground(!removeBackground);
-      Alert.alert('완료', `배경 ${!removeBackground ? '제거' : '복원'}가 완료되었습니다!`);
-      setShowEditMenu(false);
-    } catch (error) {
-      console.error('Background removal error:', error);
-      Alert.alert('오류', '배경 제거에 실패했습니다.');
-    } finally {
-      setIsProcessing(false);
+  // Three.js + Luma Web Library HTML
+  const getLumaEditorHTML = () => {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      overflow: hidden;
+      background: #000;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     }
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+    #textOverlay {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 16px 24px;
+      background: rgba(0, 0, 0, 0.7);
+      border-radius: 8px;
+      color: white;
+      font-size: 20px;
+      font-weight: 600;
+      text-align: center;
+      pointer-events: none;
+      display: none;
+      max-width: 80%;
+      word-wrap: break-word;
+    }
+    #textOverlay.top { top: 20px; }
+    #textOverlay.center { top: 50%; transform: translate(-50%, -50%); }
+    #textOverlay.bottom { bottom: 20px; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <div id="textOverlay"></div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.157.0/examples/jsm/",
+      "@lumaai/luma-web": "https://unpkg.com/@lumaai/luma-web@0.2.0/dist/library/luma-web.module.js"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import { WebGLRenderer, PerspectiveCamera, Scene, Color } from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { LumaSplatsThree, LumaSplatsSemantics } from '@lumaai/luma-web';
+
+    const canvas = document.getElementById('canvas');
+    const textOverlay = document.getElementById('textOverlay');
+
+    const renderer = new WebGLRenderer({
+      canvas: canvas,
+      antialias: false,
+      alpha: true
+    });
+
+    renderer.setSize(window.innerWidth, window.innerHeight, false);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    const scene = new Scene();
+    scene.background = new Color(0x000000);
+
+    const camera = new PerspectiveCamera(
+      75,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000
+    );
+    camera.position.z = 2;
+
+    const controls = new OrbitControls(camera, canvas);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.enablePan = true;
+    controls.enableZoom = true;
+
+    let splat = null;
+    let currentSource = '${isLuma ? captureUrl : ''}';
+    let backgroundRemoved = false;
+
+    function loadSplat(source) {
+      if (splat) {
+        scene.remove(splat);
+        splat = null;
+      }
+
+      if (!source) {
+        console.log('No source provided');
+        return;
+      }
+
+      splat = new LumaSplatsThree({
+        source: source,
+        loadingAnimationEnabled: true,
+        particleRevealEnabled: true,
+      });
+
+      splat.onLoad = () => {
+        console.log('Splat loaded successfully');
+        window.ReactNativeWebView?.postMessage(JSON.stringify({
+          type: 'splatLoaded'
+        }));
+      };
+
+      scene.add(splat);
+    }
+
+    // 배경 제거 토글
+    window.toggleBackground = function() {
+      if (!splat) return;
+
+      backgroundRemoved = !backgroundRemoved;
+
+      if (backgroundRemoved) {
+        splat.semanticsMask = LumaSplatsSemantics.FOREGROUND;
+      } else {
+        splat.semanticsMask = LumaSplatsSemantics.FOREGROUND | LumaSplatsSemantics.BACKGROUND;
+      }
+
+      window.ReactNativeWebView?.postMessage(JSON.stringify({
+        type: 'backgroundToggled',
+        removed: backgroundRemoved
+      }));
+    };
+
+    // 텍스트 오버레이 업데이트
+    window.updateTextOverlay = function(text, position, color) {
+      textOverlay.textContent = text;
+      textOverlay.className = position;
+      textOverlay.style.color = color;
+      textOverlay.style.display = text ? 'block' : 'none';
+
+      window.ReactNativeWebView?.postMessage(JSON.stringify({
+        type: 'textUpdated',
+        text: text
+      }));
+    };
+
+    // 초기 로드
+    if (currentSource) {
+      loadSplat(currentSource);
+    }
+
+    // 애니메이션 루프
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // 리사이즈 핸들러
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight, false);
+    });
+
+    // React Native로 준비 완료 메시지 전송
+    window.ReactNativeWebView?.postMessage(JSON.stringify({
+      type: 'ready'
+    }));
+  </script>
+</body>
+</html>
+    `;
+  };
+
+  const handleRemoveBackground = () => {
+    if (!isLuma) {
+      Alert.alert('알림', '배경 제거는 Luma 가우시안 스플래팅 에셋에서만 가능합니다.');
+      return;
+    }
+
+    setIsProcessing(true);
+    webViewRef.current?.injectJavaScript(`
+      window.toggleBackground();
+      true;
+    `);
+
+    setTimeout(() => {
+      setRemoveBackground(!removeBackground);
+      setIsProcessing(false);
+      setShowEditMenu(false);
+    }, 500);
   };
 
   const handleAddText = () => {
@@ -61,6 +245,16 @@ export default function EditAssetScreen() {
       Alert.alert('알림', '텍스트를 입력해주세요.');
       return;
     }
+
+    webViewRef.current?.injectJavaScript(`
+      window.updateTextOverlay(
+        ${JSON.stringify(textOverlay)},
+        ${JSON.stringify(textPosition)},
+        ${JSON.stringify(textColor)}
+      );
+      true;
+    `);
+
     setShowEditMenu(false);
     Alert.alert('완료', '텍스트가 추가되었습니다!');
   };
@@ -102,15 +296,17 @@ export default function EditAssetScreen() {
       id: 'removeBackground',
       title: removeBackground ? '배경 복원' : '배경 제거',
       icon: 'layers-outline' as const,
-      description: 'Luma 시맨틱 레이어 필터링',
+      description: 'Luma semanticsMask 필터링',
       onPress: handleRemoveBackground,
+      disabled: !isLuma,
     },
     {
       id: 'addText',
       title: '텍스트 추가',
       icon: 'text-outline' as const,
-      description: '이미지에 텍스트 오버레이',
-      onPress: () => setEditMode('addText'),
+      description: '3D 씬에 텍스트 오버레이',
+      onPress: () => {},
+      disabled: false,
     },
   ];
 
@@ -127,20 +323,32 @@ export default function EditAssetScreen() {
       </View>
 
       <ScrollView style={styles.content}>
-        <View style={styles.imageContainer}>
-          <Image source={{ uri: imageUrl }} style={styles.image} />
-
-          {/* 배경 제거 효과 시뮬레이션 */}
-          {removeBackground && (
-            <View style={styles.backgroundOverlay}>
-              <Text style={styles.overlayText}>배경 제거됨</Text>
-            </View>
-          )}
-
-          {/* 텍스트 오버레이 */}
-          {textOverlay && (
-            <View style={[styles.textOverlay, styles[`textOverlay${textPosition.charAt(0).toUpperCase() + textPosition.slice(1)}` as keyof typeof styles]]}>
-              <Text style={styles.overlayTextContent}>{textOverlay}</Text>
+        {/* 3D 뷰어 */}
+        <View style={styles.viewerContainer}>
+          {isLuma ? (
+            <WebView
+              ref={webViewRef}
+              source={{ html: getLumaEditorHTML() }}
+              style={styles.webview}
+              javaScriptEnabled={true}
+              domStorageEnabled={true}
+              allowsInlineMediaPlayback={true}
+              mediaPlaybackRequiresUserAction={false}
+              onMessage={(event) => {
+                try {
+                  const data = JSON.parse(event.nativeEvent.data);
+                  console.log('WebView message:', data);
+                } catch (e) {
+                  console.error('Failed to parse message:', e);
+                }
+              }}
+            />
+          ) : (
+            <View style={styles.placeholder}>
+              <Ionicons name="image" size={64} color="#9CA3AF" />
+              <Text style={styles.placeholderText}>
+                2D 이미지는 미리보기만 가능합니다
+              </Text>
             </View>
           )}
 
@@ -170,16 +378,41 @@ export default function EditAssetScreen() {
               data={editOptions}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={styles.editOption}
-                  onPress={item.onPress}
-                  disabled={isProcessing}
+                  style={[
+                    styles.editOption,
+                    item.disabled && styles.editOptionDisabled
+                  ]}
+                  onPress={() => {
+                    if (item.id === 'addText') {
+                      // 텍스트 입력 모드로 전환
+                    } else {
+                      item.onPress();
+                    }
+                  }}
+                  disabled={item.disabled || isProcessing}
                 >
                   <View style={styles.editOptionIcon}>
-                    <Ionicons name={item.icon} size={24} color="#6366F1" />
+                    <Ionicons
+                      name={item.icon}
+                      size={24}
+                      color={item.disabled ? '#9CA3AF' : '#6366F1'}
+                    />
                   </View>
                   <View style={styles.editOptionContent}>
-                    <Text style={styles.editOptionTitle}>{item.title}</Text>
-                    <Text style={styles.editOptionDescription}>{item.description}</Text>
+                    <Text style={[
+                      styles.editOptionTitle,
+                      item.disabled && styles.editOptionTitleDisabled
+                    ]}>
+                      {item.title}
+                    </Text>
+                    <Text style={styles.editOptionDescription}>
+                      {item.description}
+                    </Text>
+                    {item.disabled && (
+                      <Text style={styles.editOptionWarning}>
+                        Luma 에셋 전용 기능
+                      </Text>
+                    )}
                   </View>
                   {isProcessing && (
                     <ActivityIndicator size="small" color="#6366F1" />
@@ -191,43 +424,46 @@ export default function EditAssetScreen() {
             />
 
             {/* 텍스트 추가 입력 영역 */}
-            {editMode === 'addText' && (
-              <View style={styles.textInputSection}>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="추가할 텍스트 입력..."
-                  placeholderTextColor="#9CA3AF"
-                  value={textOverlay}
-                  onChangeText={setTextOverlay}
-                  multiline
-                />
-                <View style={styles.textPositionSelector}>
-                  <Text style={styles.textPositionLabel}>위치:</Text>
-                  {(['top', 'center', 'bottom'] as const).map((pos) => (
-                    <TouchableOpacity
-                      key={pos}
+            <View style={styles.textInputSection}>
+              <Text style={styles.sectionTitle}>텍스트 오버레이</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="추가할 텍스트 입력..."
+                placeholderTextColor="#9CA3AF"
+                value={textOverlay}
+                onChangeText={setTextOverlay}
+                multiline
+              />
+              <View style={styles.textPositionSelector}>
+                <Text style={styles.textPositionLabel}>위치:</Text>
+                {(['top', 'center', 'bottom'] as const).map((pos) => (
+                  <TouchableOpacity
+                    key={pos}
+                    style={[
+                      styles.textPositionButton,
+                      textPosition === pos && styles.textPositionButtonActive,
+                    ]}
+                    onPress={() => setTextPosition(pos)}
+                  >
+                    <Text
                       style={[
-                        styles.textPositionButton,
-                        textPosition === pos && styles.textPositionButtonActive,
+                        styles.textPositionButtonText,
+                        textPosition === pos && styles.textPositionButtonTextActive,
                       ]}
-                      onPress={() => setTextPosition(pos)}
                     >
-                      <Text
-                        style={[
-                          styles.textPositionButtonText,
-                          textPosition === pos && styles.textPositionButtonTextActive,
-                        ]}
-                      >
-                        {pos === 'top' ? '상단' : pos === 'center' ? '중앙' : '하단'}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                <TouchableOpacity style={styles.addTextButton} onPress={handleAddText}>
-                  <Text style={styles.addTextButtonText}>텍스트 적용</Text>
-                </TouchableOpacity>
+                      {pos === 'top' ? '상단' : pos === 'center' ? '중앙' : '하단'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
-            )}
+              <TouchableOpacity
+                style={styles.addTextButton}
+                onPress={handleAddText}
+                disabled={!textOverlay.trim()}
+              >
+                <Text style={styles.addTextButtonText}>텍스트 적용</Text>
+              </TouchableOpacity>
+            </View>
           </SafeAreaView>
         </Modal>
 
@@ -263,7 +499,7 @@ export default function EditAssetScreen() {
             <View style={styles.lumaInfo}>
               <Ionicons name="information-circle" size={20} color="#6366F1" />
               <Text style={styles.lumaInfoText}>
-                Luma 가우시안 스플래팅 에셋입니다. 3D 뷰어에서 감상할 수 있습니다.
+                Luma 가우시안 스플래팅 에셋입니다. 360도 회전하며 편집할 수 있습니다.
               </Text>
             </View>
           )}
@@ -314,57 +550,25 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  imageContainer: {
-    position: 'relative',
-  },
-  image: {
-    width: '100%',
+  viewerContainer: {
     height: 400,
-    backgroundColor: '#F3F4F6',
+    position: 'relative',
+    backgroundColor: '#000000',
   },
-  backgroundOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+  webview: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  placeholder: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#1F2937',
   },
-  overlayText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#6366F1',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  textOverlay: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    borderRadius: 8,
-  },
-  textOverlayTop: {
-    top: 16,
-  },
-  textOverlayCenter: {
-    top: '50%',
-    transform: [{ translateY: -20 }],
-  },
-  textOverlayBottom: {
-    bottom: 16,
-  },
-  overlayTextContent: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    textAlign: 'center',
+  placeholderText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginTop: 12,
   },
   badge3D: {
     position: 'absolute',
@@ -409,6 +613,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 12,
   },
+  editOptionDisabled: {
+    opacity: 0.5,
+  },
   editOptionIcon: {
     width: 48,
     height: 48,
@@ -427,15 +634,29 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     marginBottom: 4,
   },
+  editOptionTitleDisabled: {
+    color: '#9CA3AF',
+  },
   editOptionDescription: {
     fontSize: 14,
     color: '#6B7280',
+  },
+  editOptionWarning: {
+    fontSize: 12,
+    color: '#F59E0B',
+    marginTop: 4,
   },
   textInputSection: {
     padding: 16,
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
     backgroundColor: '#F9FAFB',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 12,
   },
   textInput: {
     backgroundColor: '#FFFFFF',
