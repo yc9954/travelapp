@@ -102,7 +102,7 @@ export default function EditAssetScreen() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
     const scene = new Scene();
-    scene.background = new Color(0x000000);
+    scene.background = new Color('black');
 
     const camera = new PerspectiveCamera(
       75,
@@ -110,7 +110,7 @@ export default function EditAssetScreen() {
       0.1,
       1000
     );
-    camera.position.z = 2;
+    camera.position.set(0, 0, 2);
 
     const controls = new OrbitControls(camera, canvas);
     controls.enableDamping = true;
@@ -136,7 +136,7 @@ export default function EditAssetScreen() {
 
       splat = new LumaSplatsThree({
         source: source,
-        loadingAnimationEnabled: true,
+        enableThreeShaderIntegration: false,
         particleRevealEnabled: true,
       });
 
@@ -150,35 +150,34 @@ export default function EditAssetScreen() {
       scene.add(splat);
     }
 
-    // Luma 공식 방식: Canvas + Texture로 3D Text Mesh 생성
+    // DemoHelloWorld.ts 방식: Canvas + Texture로 3D Text Mesh 생성
     function createText(text, position, color) {
-      // Canvas 생성
+      // create canvas
       const textCanvas = document.createElement('canvas');
       const context = textCanvas.getContext('2d');
       textCanvas.width = 1024;
       textCanvas.height = 512;
 
-      // 투명 배경
+      // clear white, 0 alpha
       context.fillStyle = 'rgba(255, 255, 255, 0)';
       context.fillRect(0, 0, textCanvas.width, textCanvas.height);
 
-      // 텍스트 렌더링
+      // draw text
       context.fillStyle = color || 'white';
       context.font = '200px sans-serif';
       context.textAlign = 'center';
       context.textBaseline = 'middle';
-
-      // 테두리 (가독성 향상)
-      context.strokeStyle = 'rgba(0, 0, 0, 0.7)';
-      context.lineWidth = 8;
-      context.strokeText(text, textCanvas.width / 2, textCanvas.height / 2);
+      // stroke
+      context.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+      context.lineWidth = 5;
       context.fillText(text, textCanvas.width / 2, textCanvas.height / 2);
+      context.strokeText(text, textCanvas.width / 2, textCanvas.height / 2);
 
-      // Texture 생성
+      // create texture from canvas
       const texture = new Texture(textCanvas);
       texture.needsUpdate = true;
 
-      // Material과 Geometry 생성
+      // create plane geometry and mesh with the texture
       const geometry = new PlaneGeometry(5, 2.5);
       const material = new MeshStandardMaterial({
         map: texture,
@@ -189,21 +188,23 @@ export default function EditAssetScreen() {
         emissive: color || 'white',
         emissiveIntensity: 2,
       });
+      const textPlane = new Mesh(geometry, material);
 
-      const mesh = new Mesh(geometry, material);
-
-      // position에 따라 위치 조정
+      // position and rotate based on user selection
+      let yPos = -0.9;
       if (position === 'top') {
-        mesh.position.set(0, 1.2, 0);
+        yPos = 0.9;
+      } else if (position === 'center') {
+        yPos = 0;
       } else if (position === 'bottom') {
-        mesh.position.set(0, -1.2, 0);
-      } else {
-        mesh.position.set(0, 0, 0);
+        yPos = -0.9;
       }
 
-      mesh.scale.setScalar(0.6);
+      textPlane.position.set(0.8, yPos, 0);
+      textPlane.rotation.y = Math.PI / 2;
+      textPlane.scale.setScalar(0.6);
 
-      return mesh;
+      return textPlane;
     }
 
     // 배경 제거 토글
