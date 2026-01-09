@@ -1,5 +1,9 @@
 import axios from 'axios';
+import { delay } from './mockData';
 import type { LumaConvertRequest, LumaConvertResponse } from '../types';
+
+// Mock 모드 활성화 (Luma API 없이 테스트하려면 true로 설정)
+const USE_MOCK_LUMA = true;
 
 const LUMA_API_KEY = 'your_luma_api_key_here';
 const LUMA_API_URL = 'https://api.lumalabs.ai/v1';
@@ -18,6 +22,14 @@ class LumaService {
   }
 
   async convertTo3D(imageUrl: string): Promise<LumaConvertResponse> {
+    if (USE_MOCK_LUMA) {
+      await delay(800);
+      return {
+        taskId: 'mock_task_' + Date.now(),
+        status: 'processing',
+      };
+    }
+
     try {
       const response = await this.client.post('/image-to-3d', {
         image_url: imageUrl,
@@ -34,6 +46,15 @@ class LumaService {
   }
 
   async checkConversionStatus(taskId: string): Promise<LumaConvertResponse> {
+    if (USE_MOCK_LUMA) {
+      await delay(500);
+      return {
+        taskId,
+        status: 'completed',
+        image3dUrl: 'mock_3d_url',
+      };
+    }
+
     try {
       const response = await this.client.get(`/tasks/${taskId}`);
 
@@ -48,7 +69,13 @@ class LumaService {
     }
   }
 
-  async waitForConversion(taskId: string, maxAttempts: number = 30): Promise<string> {
+  async waitForConversion(taskId: string, maxAttempts: number = 30, originalUrl?: string): Promise<string> {
+    if (USE_MOCK_LUMA) {
+      // Mock: 3초 후 변환 완료 시뮬레이션 (원본 이미지 그대로 반환)
+      await delay(3000);
+      return originalUrl || 'mock_3d_conversion_completed';
+    }
+
     for (let i = 0; i < maxAttempts; i++) {
       const result = await this.checkConversionStatus(taskId);
 
