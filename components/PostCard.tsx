@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Image, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Post } from '../types';
 
@@ -11,12 +11,15 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, onLike, onComment, onViewPost }: PostCardProps) {
+  const [imageLoading, setImageLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.userInfo}>
           <Image
-            source={{ uri: post.user.profileImage || 'https://via.placeholder.com/40' }}
+            source={{ uri: post.user.profileImage || 'https://cdn-luma.com/public/avatars/avatar-default.jpg' }}
             style={styles.avatar}
           />
           <View>
@@ -28,17 +31,38 @@ export function PostCard({ post, onLike, onComment, onViewPost }: PostCardProps)
         </View>
         {post.is3D && (
           <View style={styles.badge3D}>
+            <Ionicons name="cube-outline" size={14} color="#FFFFFF" style={{ marginRight: 4 }} />
             <Text style={styles.badge3DText}>3D</Text>
           </View>
         )}
       </View>
 
       <TouchableOpacity activeOpacity={0.9} onPress={() => onViewPost(post.id)}>
-        <Image
-          source={{ uri: post.imageUrl }}
-          style={styles.image}
-          resizeMode="cover"
-        />
+        <View style={styles.imageContainer}>
+          {imageLoading && !imageError && (
+            <View style={styles.imageLoadingContainer}>
+              <ActivityIndicator size="large" color="#60A5FA" />
+            </View>
+          )}
+          {imageError ? (
+            <View style={styles.imageErrorContainer}>
+              <Ionicons name="image-outline" size={64} color="#9CA3AF" />
+              <Text style={styles.imageErrorText}>이미지를 불러올 수 없습니다</Text>
+            </View>
+          ) : (
+            <Image
+              source={{ uri: post.imageUrl }}
+              style={styles.image}
+              resizeMode="cover"
+              onLoadStart={() => setImageLoading(true)}
+              onLoadEnd={() => setImageLoading(false)}
+              onError={() => {
+                setImageLoading(false);
+                setImageError(true);
+              }}
+            />
+          )}
+        </View>
       </TouchableOpacity>
 
       <View style={styles.actions}>
@@ -111,6 +135,7 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     marginRight: 12,
+    backgroundColor: '#F3F4F6',
   },
   username: {
     fontSize: 14,
@@ -123,6 +148,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   badge3D: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#3B82F6',
     paddingHorizontal: 12,
     paddingVertical: 4,
@@ -133,10 +160,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  image: {
+  imageContainer: {
     width: '100%',
     height: 400,
     backgroundColor: '#F3F4F6',
+    position: 'relative',
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  imageLoadingContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+  },
+  imageErrorContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+  },
+  imageErrorText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#6B7280',
   },
   actions: {
     flexDirection: 'row',
