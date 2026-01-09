@@ -333,9 +333,15 @@ export default function EditAssetScreen() {
         imageUrl: imageUrl,
         image3dUrl: isLuma ? captureUrl : undefined,
         is3D: isLuma,
-        caption: textOverlay ? `${caption}\n\n"${textOverlay}"` : caption,
+        caption: caption,
         location: location || undefined,
         hashtags: hashtagArray,
+        editMetadata: {
+          textOverlay: textOverlay || undefined,
+          textPosition: textPosition,
+          textColor: textColor,
+          removeBackground: removeBackground,
+        },
       });
 
       Alert.alert('성공', '게시물이 업로드되었습니다!');

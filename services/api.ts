@@ -107,6 +107,7 @@ class ApiService {
         caption: data.caption,
         location: data.location,
         hashtags: data.hashtags,
+        editMetadata: data.editMetadata,
         likesCount: 0,
         commentsCount: 0,
         isLiked: false,

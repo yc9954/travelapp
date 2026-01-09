@@ -24,6 +24,13 @@ export interface Post {
   commentsCount: number;
   isLiked: boolean;
   createdAt: string;
+  // 3D 편집 메타데이터
+  editMetadata?: {
+    textOverlay?: string;
+    textPosition?: 'top' | 'center' | 'bottom';
+    textColor?: string;
+    removeBackground?: boolean;
+  };
 }
 
 export interface Comment {
@@ -58,6 +65,13 @@ export interface CreatePostRequest {
   caption: string;
   location?: string;
   hashtags: string[];
+  // 3D 편집 메타데이터
+  editMetadata?: {
+    textOverlay?: string;
+    textPosition?: 'top' | 'center' | 'bottom';
+    textColor?: string;
+    removeBackground?: boolean;
+  };
 }
 
 export interface LumaConvertRequest {

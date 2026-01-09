@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
   Image,
   Modal,
-  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
@@ -100,57 +99,188 @@ export default function AssetViewerScreen() {
     }
   };
 
-  const getLumaEmbedUrl = (lumaUrl: string): string => {
-    // Luma AI capture URL에서 UUID 추출
-    // 형식: https://lumalabs.ai/capture/{uuid}
-    // 또는: https://lumalabs.ai/luma-web-library/{id}
-    try {
-      const url = new URL(lumaUrl);
-      const pathParts = url.pathname.split('/').filter(Boolean);
-      
-      let captureId: string | undefined;
-      
-      if (url.hostname.includes('lumalabs.ai')) {
-        // https://lumalabs.ai/capture/{uuid} 형식
-        const captureIndex = pathParts.indexOf('capture');
-        if (captureIndex >= 0 && pathParts.length > captureIndex + 1) {
-          captureId = pathParts[captureIndex + 1];
-        } else {
-          // luma-web-library 형식
-          const libraryIndex = pathParts.indexOf('luma-web-library');
-          if (libraryIndex >= 0 && pathParts.length > libraryIndex + 1) {
-            captureId = pathParts[libraryIndex + 1];
-          } else {
-            // 마지막 경로 요소를 ID로 사용
-            captureId = pathParts[pathParts.length - 1];
-          }
-        }
-      } else if (url.hostname.includes('captures.lumalabs.ai')) {
-        // https://captures.lumalabs.ai/{id} 또는 https://captures.lumalabs.ai/embed/{id} 형식
-        const embedIndex = pathParts.indexOf('embed');
-        if (embedIndex >= 0 && pathParts.length > embedIndex + 1) {
-          // 이미 embed URL인 경우
-          return lumaUrl;
-        }
-        captureId = pathParts[pathParts.length - 1];
-      }
-      
-      if (captureId && captureId !== 'embed' && captureId !== 'capture') {
-        // Luma AI embed URL 형식으로 변환
-        return `https://captures.lumalabs.ai/embed/${captureId}?mode=slf&background=%23ffffff&color=%23000000&showTitle=false&loadBg=true&logoPosition=bottom-left&infoPosition=bottom-right&cinematicVideo=false&showMenu=false`;
-      }
-    } catch (e) {
-      console.error('Failed to parse Luma URL:', e);
+  const getLuma3DViewerHTML = () => {
+    if (!post || !post.is3D || !post.image3dUrl) return '';
+
+    const metadata = post.editMetadata || {};
+    const textOverlay = metadata.textOverlay || '';
+    const textPosition = metadata.textPosition || 'center';
+    const textColor = metadata.textColor || '#ffffff';
+    const removeBackground = metadata.removeBackground || false;
+
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      overflow: hidden;
+      background: #000;
     }
-    
-    // URL 파싱 실패 시 원본 URL 반환 (이미 embed URL일 수도 있음)
-    return lumaUrl;
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.157.0/examples/jsm/",
+      "@lumaai/luma-web": "https://unpkg.com/@lumaai/luma-web@0.2.0/dist/library/luma-web.module.js"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import {
+      WebGLRenderer,
+      PerspectiveCamera,
+      Scene,
+      Color,
+      Texture,
+      PlaneGeometry,
+      MeshStandardMaterial,
+      Mesh,
+      DoubleSide
+    } from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { LumaSplatsThree, LumaSplatsSemantics } from '@lumaai/luma-web';
+
+    const canvas = document.getElementById('canvas');
+
+    const renderer = new WebGLRenderer({
+      canvas: canvas,
+      antialias: false,
+      alpha: true
+    });
+
+    renderer.setSize(window.innerWidth, window.innerHeight, false);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    const scene = new Scene();
+    scene.background = new Color('black');
+
+    const camera = new PerspectiveCamera(
+      75,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000
+    );
+    camera.position.set(0, 0, 2);
+
+    const controls = new OrbitControls(camera, canvas);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.enablePan = true;
+    controls.enableZoom = true;
+
+    // Splat 로드
+    const splat = new LumaSplatsThree({
+      source: '${post.image3dUrl}',
+      enableThreeShaderIntegration: false,
+      particleRevealEnabled: true,
+    });
+
+    // 배경 제거 적용
+    if (${removeBackground}) {
+      splat.semanticsMask = LumaSplatsSemantics.FOREGROUND;
+    }
+
+    scene.add(splat);
+
+    // DemoHelloWorld.ts 방식: Canvas + Texture로 3D Text Mesh 생성
+    function createText(text, position, color) {
+      const textCanvas = document.createElement('canvas');
+      const context = textCanvas.getContext('2d');
+      textCanvas.width = 1024;
+      textCanvas.height = 512;
+
+      context.fillStyle = 'rgba(255, 255, 255, 0)';
+      context.fillRect(0, 0, textCanvas.width, textCanvas.height);
+
+      context.fillStyle = color || 'white';
+      context.font = '200px sans-serif';
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+      context.lineWidth = 5;
+      context.fillText(text, textCanvas.width / 2, textCanvas.height / 2);
+      context.strokeText(text, textCanvas.width / 2, textCanvas.height / 2);
+
+      const texture = new Texture(textCanvas);
+      texture.needsUpdate = true;
+
+      const geometry = new PlaneGeometry(5, 2.5);
+      const material = new MeshStandardMaterial({
+        map: texture,
+        transparent: false,
+        alphaTest: 0.5,
+        side: DoubleSide,
+        premultipliedAlpha: true,
+        emissive: color || 'white',
+        emissiveIntensity: 2,
+      });
+      const textPlane = new Mesh(geometry, material);
+
+      let yPos = -0.9;
+      if (position === 'top') {
+        yPos = 0.9;
+      } else if (position === 'center') {
+        yPos = 0;
+      } else if (position === 'bottom') {
+        yPos = -0.9;
+      }
+
+      textPlane.position.set(0.8, yPos, 0);
+      textPlane.rotation.y = Math.PI / 2;
+      textPlane.scale.setScalar(0.6);
+
+      return textPlane;
+    }
+
+    // 텍스트 오버레이 적용
+    const textOverlay = '${textOverlay.replace(/'/g, "\\'")}';
+    if (textOverlay) {
+      const textMesh = createText(textOverlay, '${textPosition}', '${textColor}');
+      scene.add(textMesh);
+    }
+
+    // 애니메이션 루프
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // 리사이즈 핸들러
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight, false);
+    });
+
+    window.ReactNativeWebView?.postMessage(JSON.stringify({
+      type: 'ready'
+    }));
+  </script>
+</body>
+</html>
+    `;
   };
 
   const renderComment = ({ item }: { item: Comment }) => (
     <View style={styles.commentItem}>
       <Image
-        source={{ uri: item.user.profileImage || 'https://via.placeholder.com/40' }}
+        source={{ uri: item.user.profileImage || 'https://cdn-luma.com/public/avatars/avatar-default.jpg' }}
         style={styles.commentAvatar}
       />
       <View style={styles.commentContent}>
@@ -177,34 +307,20 @@ export default function AssetViewerScreen() {
   }
 
   const is3D = post.is3D && post.image3dUrl;
-  const embedUrl = is3D ? getLumaEmbedUrl(post.image3dUrl) : null;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#1F2937" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          {post.user.username}
-        </Text>
-        <View style={styles.placeholder} />
-      </View>
-
+    <View style={styles.container}>
+      {/* 3D 뷰어 (전체 화면) */}
       <View style={styles.viewerContainer}>
-        {is3D && embedUrl ? (
+        {is3D ? (
           <WebView
             ref={webViewRef}
-            source={{ uri: embedUrl }}
+            source={{ html: getLuma3DViewerHTML() }}
             style={styles.webview}
             javaScriptEnabled={true}
             domStorageEnabled={true}
-            startInLoadingState={true}
-            renderLoading={() => (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#6366F1" />
-              </View>
-            )}
+            allowsInlineMediaPlayback={true}
+            mediaPlaybackRequiresUserAction={false}
           />
         ) : (
           <Image
@@ -215,90 +331,103 @@ export default function AssetViewerScreen() {
         )}
       </View>
 
-      <View style={styles.actions}>
-        <View style={styles.leftActions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={handleLike}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={post.isLiked ? 'heart' : 'heart-outline'}
-              size={28}
-              color={post.isLiked ? '#EF4444' : '#1F2937'}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => setShowComments(true)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="chatbubble-outline" size={26} color="#1F2937" />
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.likesCount}>{post.likesCount.toLocaleString()}</Text>
-      </View>
+      {/* 투명 헤더 */}
+      <SafeAreaView style={styles.transparentHeader} edges={['top']}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
+          <View style={styles.headerButtonBackground}>
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          </View>
+        </TouchableOpacity>
+        <Text style={styles.headerUsername} numberOfLines={1}>
+          {post.user.username}
+        </Text>
+        <View style={styles.headerPlaceholder} />
+      </SafeAreaView>
 
-      <View style={styles.captionContainer}>
-        <View style={styles.captionHeader}>
-          <Text style={styles.captionUsername}>{post.user.username}</Text>
-          {post.location && (
-            <View style={styles.locationContainer}>
-              <Ionicons name="location-outline" size={14} color="#6B7280" />
-              <Text style={styles.location}>{post.location}</Text>
-            </View>
-          )}
-        </View>
-        <Text style={styles.caption}>{post.caption}</Text>
-        {post.hashtags.length > 0 && (
-          <Text style={styles.hashtags}>
-            {post.hashtags.map(tag => `#${tag}`).join(' ')}
-          </Text>
-        )}
-        {post.commentsCount > 0 && (
-          <TouchableOpacity onPress={() => setShowComments(true)}>
-            <Text style={styles.viewComments}>
-              댓글 {post.commentsCount}개 모두 보기
+      {/* 투명 하단 UI */}
+      <SafeAreaView style={styles.transparentBottom} edges={['bottom']}>
+        {/* 액션 버튼 */}
+        <View style={styles.actionsOverlay}>
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={styles.actionButtonOverlay}
+              onPress={handleLike}
+              activeOpacity={0.7}
+            >
+              <View style={styles.actionButtonBackground}>
+                <Ionicons
+                  name={post.isLiked ? 'heart' : 'heart-outline'}
+                  size={28}
+                  color={post.isLiked ? '#EF4444' : '#FFFFFF'}
+                />
+                <Text style={styles.actionText}>{post.likesCount}</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionButtonOverlay}
+              onPress={() => setShowComments(true)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.actionButtonBackground}>
+                <Ionicons name="chatbubble-outline" size={26} color="#FFFFFF" />
+                <Text style={styles.actionText}>{post.commentsCount}</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* 캡션 */}
+          <View style={styles.captionOverlay}>
+            <Text style={styles.captionUsernameOverlay}>{post.user.username}</Text>
+            <Text style={styles.captionTextOverlay} numberOfLines={2}>
+              {post.caption}
             </Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-      >
-        <View style={styles.commentInputContainer}>
-          <Image
-            source={{ uri: user?.profileImage || 'https://via.placeholder.com/32' }}
-            style={styles.inputAvatar}
-          />
-          <TextInput
-            style={styles.commentInput}
-            placeholder="댓글을 입력하세요..."
-            placeholderTextColor="#9CA3AF"
-            value={commentText}
-            onChangeText={setCommentText}
-            multiline
-            maxLength={500}
-          />
-          <TouchableOpacity
-            onPress={handleSubmitComment}
-            disabled={!commentText.trim() || isSubmittingComment}
-            style={[
-              styles.submitButton,
-              (!commentText.trim() || isSubmittingComment) && styles.submitButtonDisabled,
-            ]}
-          >
-            {isSubmittingComment ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Ionicons name="send" size={20} color="#FFFFFF" />
+            {post.hashtags.length > 0 && (
+              <Text style={styles.hashtagsOverlay} numberOfLines={1}>
+                {post.hashtags.map(tag => `#${tag}`).join(' ')}
+              </Text>
             )}
-          </TouchableOpacity>
+          </View>
         </View>
-      </KeyboardAvoidingView>
 
+        {/* 댓글 입력 */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
+          <View style={styles.commentInputOverlay}>
+            <Image
+              source={{ uri: user?.profileImage || 'https://cdn-luma.com/public/avatars/avatar-default.jpg' }}
+              style={styles.inputAvatar}
+            />
+            <TextInput
+              style={styles.commentInput}
+              placeholder="댓글을 입력하세요..."
+              placeholderTextColor="#9CA3AF"
+              value={commentText}
+              onChangeText={setCommentText}
+              multiline
+              maxLength={500}
+            />
+            <TouchableOpacity
+              onPress={handleSubmitComment}
+              disabled={!commentText.trim() || isSubmittingComment}
+              style={[
+                styles.submitButton,
+                (!commentText.trim() || isSubmittingComment) && styles.submitButtonDisabled,
+              ]}
+            >
+              {isSubmittingComment ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Ionicons name="send" size={20} color="#FFFFFF" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+
+      {/* 댓글 모달 */}
       <Modal
         visible={showComments}
         animationType="slide"
@@ -332,47 +461,23 @@ export default function AssetViewerScreen() {
           )}
         </SafeAreaView>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#000000',
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-    flex: 1,
-    textAlign: 'center',
-  },
-  placeholder: {
-    width: 32,
+    backgroundColor: '#000000',
   },
   viewerContainer: {
-    flex: 1,
-    backgroundColor: '#000000',
+    ...StyleSheet.absoluteFillObject,
   },
   webview: {
     flex: 1,
@@ -382,87 +487,116 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  loadingContainer: {
+
+  // 투명 헤더
+  transparentHeader: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#000000',
-  },
-  actions: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    backgroundColor: 'transparent',
   },
-  leftActions: {
-    flexDirection: 'row',
+  headerButton: {
+    padding: 4,
+  },
+  headerButtonBackground: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  actionButton: {
-    marginRight: 16,
-  },
-  likesCount: {
-    fontSize: 16,
+  headerUsername: {
+    fontSize: 18,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#FFFFFF',
+    flex: 1,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
-  captionContainer: {
+  headerPlaceholder: {
+    width: 48,
+  },
+
+  // 투명 하단 UI
+  transparentBottom: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'transparent',
+  },
+  actionsOverlay: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    paddingTop: 16,
+    paddingBottom: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  captionHeader: {
+  actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-    gap: 12,
+    marginBottom: 12,
   },
-  captionUsername: {
+  actionButtonOverlay: {
+    marginRight: 20,
+  },
+  actionButtonBackground: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  actionText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
-  locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+  captionOverlay: {
+    marginTop: 8,
   },
-  location: {
+  captionUsernameOverlay: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  captionTextOverlay: {
     fontSize: 14,
-    color: '#6B7280',
-  },
-  caption: {
-    fontSize: 14,
-    color: '#1F2937',
+    color: '#FFFFFF',
     lineHeight: 20,
-    marginBottom: 8,
+    marginBottom: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
-  hashtags: {
+  hashtagsOverlay: {
     fontSize: 14,
-    color: '#3B82F6',
-    marginBottom: 8,
+    color: '#60A5FA',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
-  viewComments: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 4,
-  },
-  commentInputContainer: {
+
+  // 댓글 입력
+  commentInputOverlay: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     gap: 12,
   },
   inputAvatar: {
@@ -472,12 +606,12 @@ const styles = StyleSheet.create({
   },
   commentInput: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#1F2937',
+    color: '#FFFFFF',
     maxHeight: 100,
   },
   submitButton: {
@@ -489,8 +623,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   submitButtonDisabled: {
-    backgroundColor: '#9CA3AF',
+    backgroundColor: '#4B5563',
   },
+
+  // 댓글 모달
   modalContainer: {
     flex: 1,
     backgroundColor: '#FFFFFF',

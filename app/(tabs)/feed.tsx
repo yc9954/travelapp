@@ -8,6 +8,7 @@ import {
   Text,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import { PostCard } from '../../components/PostCard';
 import { api } from '../../services/api';
 import type { Post } from '../../types';
@@ -67,6 +68,10 @@ export default function FeedScreen() {
     console.log('Open comments for post:', postId);
   };
 
+  const handleViewPost = (postId: string) => {
+    router.push(`/asset-viewer?postId=${postId}`);
+  };
+
   if (isLoading) {
     return (
       <View style={styles.centerContainer}>
@@ -87,6 +92,7 @@ export default function FeedScreen() {
             post={item}
             onLike={handleLike}
             onComment={handleComment}
+            onViewPost={handleViewPost}
           />
         )}
         keyExtractor={(item) => item.id}

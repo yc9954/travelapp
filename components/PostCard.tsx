@@ -7,9 +7,10 @@ interface PostCardProps {
   post: Post;
   onLike: (postId: string) => void;
   onComment: (postId: string) => void;
+  onViewPost: (postId: string) => void;
 }
 
-export function PostCard({ post, onLike, onComment }: PostCardProps) {
+export function PostCard({ post, onLike, onComment, onViewPost }: PostCardProps) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -32,11 +33,13 @@ export function PostCard({ post, onLike, onComment }: PostCardProps) {
         )}
       </View>
 
-      <Image
-        source={{ uri: post.imageUrl }}
-        style={styles.image}
-        resizeMode="cover"
-      />
+      <TouchableOpacity activeOpacity={0.9} onPress={() => onViewPost(post.id)}>
+        <Image
+          source={{ uri: post.imageUrl }}
+          style={styles.image}
+          resizeMode="cover"
+        />
+      </TouchableOpacity>
 
       <View style={styles.actions}>
         <View style={styles.leftActions}>
