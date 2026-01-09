@@ -91,7 +91,7 @@ export default function ProfileScreen() {
         ListHeaderComponent={
           <View style={styles.profileHeader}>
             <Image
-              source={{ uri: user.profileImage || 'https://via.placeholder.com/100' }}
+              source={{ uri: user.profileImage || 'https://cdn-luma.com/public/avatars/avatar-default.jpg' }}
               style={styles.profileImage}
             />
             <Text style={styles.username}>{user.username}</Text>
