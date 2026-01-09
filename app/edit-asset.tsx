@@ -62,8 +62,7 @@ export default function EditAssetScreen() {
     }
     #textOverlay {
       position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
+      transform: translate(-50%, -50%);
       padding: 16px 24px;
       background: rgba(0, 0, 0, 0.7);
       border-radius: 8px;
@@ -75,10 +74,8 @@ export default function EditAssetScreen() {
       display: none;
       max-width: 80%;
       word-wrap: break-word;
+      white-space: nowrap;
     }
-    #textOverlay.top { top: 20px; }
-    #textOverlay.center { top: 50%; transform: translate(-50%, -50%); }
-    #textOverlay.bottom { bottom: 20px; }
   </style>
 </head>
 <body>
@@ -96,7 +93,7 @@ export default function EditAssetScreen() {
   </script>
 
   <script type="module">
-    import { WebGLRenderer, PerspectiveCamera, Scene, Color } from 'three';
+    import { WebGLRenderer, PerspectiveCamera, Scene, Color, Vector3 } from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     import { LumaSplatsThree, LumaSplatsSemantics } from '@lumaai/luma-web';
 
@@ -132,6 +129,11 @@ export default function EditAssetScreen() {
     let splat = null;
     let currentSource = '${isLuma ? captureUrl : ''}';
     let backgroundRemoved = false;
+
+    // 3D 공간에서 텍스트가 고정될 위치 (월드 좌표)
+    const labelPosition = new Vector3(0, 0, 0);
+    let textEnabled = false;
+    let currentTextPosition = 'center';
 
     function loadSplat(source) {
       if (splat) {
@@ -178,12 +180,39 @@ export default function EditAssetScreen() {
       }));
     };
 
+    // 3D 좌표를 화면 좌표로 투영하여 HTML 위치 업데이트
+    function updateLabelPosition() {
+      if (!textEnabled) return;
+
+      // 3D 월드 좌표를 카메라 기준으로 투영
+      const projected = labelPosition.clone();
+      projected.project(camera);
+
+      // NDC 좌표 (-1 ~ 1)를 화면 픽셀 좌표로 변환
+      const x = (projected.x * 0.5 + 0.5) * window.innerWidth;
+      const y = (-projected.y * 0.5 + 0.5) * window.innerHeight;
+
+      // HTML 요소 위치 업데이트
+      textOverlay.style.left = \`\${x}px\`;
+      textOverlay.style.top = \`\${y}px\`;
+    }
+
     // 텍스트 오버레이 업데이트
     window.updateTextOverlay = function(text, position, color) {
       textOverlay.textContent = text;
-      textOverlay.className = position;
       textOverlay.style.color = color;
       textOverlay.style.display = text ? 'block' : 'none';
+      textEnabled = !!text;
+      currentTextPosition = position;
+
+      // position에 따라 3D 공간에서의 위치 조정
+      if (position === 'top') {
+        labelPosition.set(0, 0.5, 0);
+      } else if (position === 'bottom') {
+        labelPosition.set(0, -0.5, 0);
+      } else {
+        labelPosition.set(0, 0, 0);
+      }
 
       window.ReactNativeWebView?.postMessage(JSON.stringify({
         type: 'textUpdated',
@@ -200,6 +229,7 @@ export default function EditAssetScreen() {
     function animate() {
       requestAnimationFrame(animate);
       controls.update();
+      updateLabelPosition(); // 매 프레임마다 텍스트 위치 업데이트
       renderer.render(scene, camera);
     }
     animate();
