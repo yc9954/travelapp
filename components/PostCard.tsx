@@ -33,7 +33,7 @@ export function PostCard({ post, onLike, onComment }: PostCardProps) {
       </View>
 
       <Image
-        source={{ uri: post.is3D ? post.image3dUrl : post.imageUrl }}
+        source={{ uri: post.imageUrl }}
         style={styles.image}
         resizeMode="cover"
       />
