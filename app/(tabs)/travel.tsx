@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
@@ -13,215 +12,311 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function TravelScreen() {
   const [isLoading, setIsLoading] = useState(true);
-  const [destination, setDestination] = useState('');
 
-  const getEarth3DHTML = () => {
+  const getCesiumFlightSimulatorHTML = () => {
     return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>3D Earth Explorer</title>
+  <title>Flight Simulator</title>
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Cesium.js"></script>
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; font-family: Arial, sans-serif; }
-    body { background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #334155 100%); }
-    #canvas-container { width: 100%; height: 100%; }
-    canvas { display: block; width: 100%; height: 100%; touch-action: none; }
-    .info {
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    #cesiumContainer { width: 100%; height: 100%; }
+
+    .hud {
       position: absolute;
       top: 20px;
       left: 20px;
+      background: rgba(0, 0, 0, 0.8);
       color: white;
-      font-family: Arial, sans-serif;
-      background: rgba(0, 0, 0, 0.7);
-      padding: 15px 20px;
-      border-radius: 12px;
-      backdrop-filter: blur(10px);
-      z-index: 100;
-    }
-    .title {
-      font-size: 18px;
-      font-weight: bold;
-      margin-bottom: 5px;
-    }
-    .subtitle {
+      padding: 15px;
+      border-radius: 10px;
+      font-family: monospace;
       font-size: 14px;
-      opacity: 0.8;
+      line-height: 1.6;
+      z-index: 1000;
+      backdrop-filter: blur(10px);
+    }
+
+    .controls {
+      position: absolute;
+      bottom: 30px;
+      right: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 1000;
+    }
+
+    .control-row {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .control-btn {
+      width: 60px;
+      height: 60px;
+      background: rgba(59, 130, 246, 0.7);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      backdrop-filter: blur(10px);
+      transition: all 0.1s;
+    }
+
+    .control-btn:active {
+      background: rgba(96, 165, 250, 0.9);
+      transform: scale(0.95);
+    }
+
+    .control-label {
+      position: absolute;
+      bottom: 130px;
+      right: 30px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      backdrop-filter: blur(10px);
+      z-index: 1000;
     }
   </style>
 </head>
 <body>
-  <div id="canvas-container"></div>
-  <div class="info">
-    <div class="title">🌍 3D Earth Explorer</div>
-    <div class="subtitle">Drag to rotate • Pinch to zoom</div>
+  <div id="cesiumContainer"></div>
+
+  <div class="hud" id="hud">
+    <div>✈️ Flight Simulator</div>
+    <div>Speed: <span id="speed">0</span> km/h</div>
+    <div>Altitude: <span id="altitude">0</span> m</div>
+    <div>Lat: <span id="lat">0</span>°</div>
+    <div>Lon: <span id="lon">0</span>°</div>
   </div>
 
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
-        "three/examples/jsm/controls/OrbitControls": "https://unpkg.com/three@0.157.0/examples/jsm/controls/OrbitControls.js"
+  <div class="control-label">Drag to look around</div>
+
+  <div class="controls">
+    <div class="control-row">
+      <button class="control-btn" id="pitchUp">↑</button>
+    </div>
+    <div class="control-row">
+      <button class="control-btn" id="yawLeft">←</button>
+      <button class="control-btn" id="speedUp">▲</button>
+      <button class="control-btn" id="yawRight">→</button>
+    </div>
+    <div class="control-row">
+      <button class="control-btn" id="pitchDown">↓</button>
+    </div>
+  </div>
+
+  <script>
+    // Cesium Ion token (공개 데모 토큰)
+    Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlYWE1OWUxNy1mMWZiLTQzYjYtYTQ0OS1kMWFjYmFkNjc5YzYiLCJpZCI6NTc3MzMsImlhdCI6MTYyNzg0NTE4Mn0.XcKpgANiY19MC4bdFUXMVEBToBmqS8kuYpUlxJHYZxk';
+
+    const viewer = new Cesium.Viewer('cesiumContainer', {
+      terrainProvider: Cesium.createWorldTerrain(),
+      imageryProvider: new Cesium.IonImageryProvider({ assetId: 2 }),
+      baseLayerPicker: false,
+      geocoder: false,
+      homeButton: false,
+      sceneModePicker: false,
+      navigationHelpButton: false,
+      animation: false,
+      timeline: false,
+      fullscreenButton: false,
+      vrButton: false,
+      skyBox: new Cesium.SkyBox({
+        sources: {
+          positiveX: 'https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Assets/Textures/SkyBox/tycho2t3_80_px.jpg',
+          negativeX: 'https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Assets/Textures/SkyBox/tycho2t3_80_mx.jpg',
+          positiveY: 'https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Assets/Textures/SkyBox/tycho2t3_80_py.jpg',
+          negativeY: 'https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Assets/Textures/SkyBox/tycho2t3_80_my.jpg',
+          positiveZ: 'https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Assets/Textures/SkyBox/tycho2t3_80_pz.jpg',
+          negativeZ: 'https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Assets/Textures/SkyBox/tycho2t3_80_mz.jpg'
+        }
+      })
+    });
+
+    viewer.scene.globe.enableLighting = true;
+
+    // 비행기 초기 위치 (서울 상공)
+    let longitude = Cesium.Math.toRadians(126.9780);
+    let latitude = Cesium.Math.toRadians(37.5665);
+    let height = 10000.0; // 10km 고도
+
+    // 비행 파라미터
+    let speed = 150.0; // m/s (초기 속도 ~540 km/h)
+    let heading = 0.0;
+    let pitch = 0.0;
+    let roll = 0.0;
+
+    // 비행기 모델 추가
+    const airplane = viewer.entities.add({
+      position: Cesium.Cartesian3.fromRadians(longitude, latitude, height),
+      model: {
+        uri: 'https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/SampleData/models/CesiumAir/Cesium_Air.glb',
+        minimumPixelSize: 128,
+        maximumScale: 200
       }
-    }
-  </script>
-  <script type="module">
-    import * as THREE from 'three';
-    import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-
-    // Scene setup
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.z = 3;
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setClearColor(0x000000, 0);
-    document.getElementById('canvas-container').appendChild(renderer.domElement);
-
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-    scene.add(ambientLight);
-
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(5, 3, 5);
-    scene.add(directionalLight);
-
-    // Create Earth
-    const earthGeometry = new THREE.SphereGeometry(1, 64, 64);
-
-    // Earth material with blue color and some detail
-    const earthMaterial = new THREE.MeshPhongMaterial({
-      color: 0x2E86DE,
-      emissive: 0x112244,
-      specular: 0x333333,
-      shininess: 25,
     });
 
-    const earth = new THREE.Mesh(earthGeometry, earthMaterial);
-    scene.add(earth);
+    // 카메라를 비행기 뒤에 배치
+    function updateCamera() {
+      const position = Cesium.Cartesian3.fromRadians(longitude, latitude, height);
 
-    // Add land masses as wireframe
-    const landGeometry = new THREE.SphereGeometry(1.01, 32, 32);
-    const landMaterial = new THREE.MeshBasicMaterial({
-      color: 0x44DD44,
-      wireframe: true,
-      transparent: true,
-      opacity: 0.3,
-    });
-    const land = new THREE.Mesh(landGeometry, landMaterial);
-    scene.add(land);
+      // 비행기 방향 계산
+      const hpr = new Cesium.HeadingPitchRoll(heading, pitch, roll);
+      const orientation = Cesium.Transforms.headingPitchRollQuaternion(position, hpr);
 
-    // Atmosphere glow
-    const glowGeometry = new THREE.SphereGeometry(1.15, 64, 64);
-    const glowMaterial = new THREE.MeshBasicMaterial({
-      color: 0x60A5FA,
-      transparent: true,
-      opacity: 0.15,
-      side: THREE.BackSide,
-    });
-    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
-    scene.add(glow);
+      airplane.position = position;
+      airplane.orientation = orientation;
 
-    // Stars background
-    const starsGeometry = new THREE.BufferGeometry();
-    const starsMaterial = new THREE.PointsMaterial({
-      color: 0xffffff,
-      size: 0.02,
-      transparent: true,
-      opacity: 0.8
-    });
-    const starsVertices = [];
-    for (let i = 0; i < 2000; i++) {
-      const x = (Math.random() - 0.5) * 2000;
-      const y = (Math.random() - 0.5) * 2000;
-      const z = (Math.random() - 0.5) * 2000;
-      starsVertices.push(x, y, z);
-    }
-    starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
-    const stars = new THREE.Points(starsGeometry, starsMaterial);
-    scene.add(stars);
+      // 카메라를 비행기 뒤에서 약간 위쪽에 배치
+      const distance = 50.0;
+      const cameraOffset = new Cesium.Cartesian3(-distance, 0, distance * 0.3);
 
-    // Add clouds
-    const cloudsGeometry = new THREE.SphereGeometry(1.02, 64, 64);
-    const cloudsMaterial = new THREE.MeshPhongMaterial({
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0.15,
-    });
-    const clouds = new THREE.Mesh(cloudsGeometry, cloudsMaterial);
-    scene.add(clouds);
-
-    // Controls
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.enableZoom = true;
-    controls.enableRotate = true;
-    controls.enablePan = false;
-    controls.minDistance = 1.5;
-    controls.maxDistance = 5;
-    controls.autoRotate = true;
-    controls.autoRotateSpeed = 0.5;
-
-    // Animation loop
-    function animate() {
-      requestAnimationFrame(animate);
-
-      // Rotate Earth and clouds
-      earth.rotation.y += 0.001;
-      land.rotation.y += 0.001;
-      clouds.rotation.y += 0.0015;
-
-      // Slowly rotate stars
-      stars.rotation.y += 0.0001;
-
-      controls.update();
-      renderer.render(scene, camera);
+      viewer.scene.camera.lookAtTransform(
+        Cesium.Transforms.eastNorthUpToFixedFrame(position),
+        cameraOffset
+      );
     }
 
-    // Handle window resize
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+    // HUD 업데이트
+    function updateHUD() {
+      document.getElementById('speed').textContent = Math.round(speed * 3.6);
+      document.getElementById('altitude').textContent = Math.round(height);
+      document.getElementById('lat').textContent = Cesium.Math.toDegrees(latitude).toFixed(4);
+      document.getElementById('lon').textContent = Cesium.Math.toDegrees(longitude).toFixed(4);
+    }
+
+    // 비행 물리 시뮬레이션
+    function updateFlight(deltaTime) {
+      // 속도에 따른 이동
+      const distance = speed * deltaTime;
+
+      // 지구 표면에서의 이동 계산
+      const deltaLon = Math.sin(heading) * Math.cos(pitch) * distance / (111320.0 * Math.cos(latitude));
+      const deltaLat = Math.cos(heading) * Math.cos(pitch) * distance / 111320.0;
+      const deltaHeight = Math.sin(pitch) * distance;
+
+      longitude += deltaLon;
+      latitude += deltaLat;
+      height += deltaHeight;
+
+      // 최소 고도 제한 (지형 위 500m)
+      if (height < 500) {
+        height = 500;
+        pitch = Math.max(pitch, 0); // 상승만 가능
+      }
+
+      // 최대 고도 제한
+      if (height > 50000) {
+        height = 50000;
+      }
+
+      // Roll을 heading 변화에 따라 자동 조정 (더 자연스러운 비행)
+      roll = Cesium.Math.lerp(roll, -heading * 0.1, 0.05);
+    }
+
+    // 컨트롤 버튼
+    function addControlListener(id, handler) {
+      const btn = document.getElementById(id);
+      btn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        handler();
+      });
+      btn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        handler();
+      });
+    }
+
+    addControlListener('speedUp', () => {
+      speed = Math.min(speed + 20, 400); // 최대 ~1440 km/h
     });
 
-    // Start animation
-    animate();
+    addControlListener('pitchUp', () => {
+      pitch = Math.min(pitch + 0.05, Math.PI / 6); // 최대 30도 상승
+    });
+
+    addControlListener('pitchDown', () => {
+      pitch = Math.max(pitch - 0.05, -Math.PI / 6); // 최대 30도 하강
+    });
+
+    addControlListener('yawLeft', () => {
+      heading -= 0.1;
+    });
+
+    addControlListener('yawRight', () => {
+      heading += 0.1;
+    });
+
+    // 메인 업데이트 루프
+    let lastTime = performance.now();
+
+    function tick() {
+      const currentTime = performance.now();
+      const deltaTime = (currentTime - lastTime) / 1000.0;
+      lastTime = currentTime;
+
+      updateFlight(deltaTime);
+      updateCamera();
+      updateHUD();
+
+      // Pitch를 천천히 0으로 회귀 (자동 수평 유지)
+      pitch = Cesium.Math.lerp(pitch, 0, 0.02);
+
+      requestAnimationFrame(tick);
+    }
+
+    // 초기화 및 시작
+    updateCamera();
+    updateHUD();
+    tick();
+
+    // 드래그로 카메라 회전 비활성화 (비행기 뒤에서만 봄)
+    viewer.scene.screenSpaceCameraController.enableRotate = true;
+    viewer.scene.screenSpaceCameraController.enableTranslate = false;
+    viewer.scene.screenSpaceCameraController.enableZoom = false;
+    viewer.scene.screenSpaceCameraController.enableTilt = true;
+    viewer.scene.screenSpaceCameraController.enableLook = true;
   </script>
 </body>
 </html>
     `;
   };
 
-  const quickDestinations = [
-    { name: 'Seoul', emoji: '🇰🇷' },
-    { name: 'Paris', emoji: '🇫🇷' },
-    { name: 'Tokyo', emoji: '🇯🇵' },
-    { name: 'New York', emoji: '🇺🇸' },
-  ];
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <Ionicons name="globe-outline" size={28} color="#60A5FA" />
-          <Text style={styles.headerTitle}>Travel Explorer</Text>
+          <Ionicons name="airplane" size={28} color="#60A5FA" />
+          <Text style={styles.headerTitle}>Flight Simulator</Text>
         </View>
         <Text style={styles.headerSubtitle}>
-          Explore Gaussian Splatting scenes around the world
+          Fly around the world with real terrain
         </Text>
       </View>
 
-      {/* 3D Earth View */}
-      <View style={styles.earthContainer}>
+      {/* Cesium Flight Simulator */}
+      <View style={styles.simulatorContainer}>
         <WebView
-          source={{ html: getEarth3DHTML() }}
+          source={{ html: getCesiumFlightSimulatorHTML() }}
           style={styles.webview}
           onLoadStart={() => setIsLoading(true)}
           onLoadEnd={() => setIsLoading(false)}
@@ -229,47 +324,31 @@ export default function TravelScreen() {
           bounces={false}
           javaScriptEnabled={true}
           domStorageEnabled={true}
+          allowsInlineMediaPlayback={true}
+          mediaPlaybackRequiresUserAction={false}
         />
         {isLoading && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#60A5FA" />
-            <Text style={styles.loadingText}>Loading 3D Earth...</Text>
+            <Text style={styles.loadingText}>Loading Flight Simulator...</Text>
+            <Text style={styles.loadingSubtext}>Initializing Cesium terrain...</Text>
           </View>
         )}
       </View>
 
-      {/* Search and Quick Destinations */}
-      <View style={styles.bottomSection}>
-        <View style={styles.searchBar}>
-          <Ionicons name="search" size={20} color="#94A3B8" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search location..."
-            placeholderTextColor="#94A3B8"
-            value={destination}
-            onChangeText={setDestination}
-          />
-          {destination.length > 0 && (
-            <TouchableOpacity onPress={() => setDestination('')}>
-              <Ionicons name="close-circle" size={20} color="#94A3B8" />
-            </TouchableOpacity>
-          )}
+      {/* Instructions */}
+      <View style={styles.instructions}>
+        <View style={styles.instructionRow}>
+          <Ionicons name="arrow-up-circle" size={20} color="#60A5FA" />
+          <Text style={styles.instructionText}>▲ Increase speed</Text>
         </View>
-
-        <View style={styles.quickDestinations}>
-          <Text style={styles.quickTitle}>Popular Destinations</Text>
-          <View style={styles.destinationChips}>
-            {quickDestinations.map((dest) => (
-              <TouchableOpacity
-                key={dest.name}
-                style={styles.chip}
-                onPress={() => setDestination(dest.name)}
-              >
-                <Text style={styles.chipEmoji}>{dest.emoji}</Text>
-                <Text style={styles.chipText}>{dest.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+        <View style={styles.instructionRow}>
+          <Ionicons name="swap-vertical" size={20} color="#60A5FA" />
+          <Text style={styles.instructionText}>↑↓ Climb/Descend</Text>
+        </View>
+        <View style={styles.instructionRow}>
+          <Ionicons name="swap-horizontal" size={20} color="#60A5FA" />
+          <Text style={styles.instructionText}>←→ Turn left/right</Text>
         </View>
       </View>
     </SafeAreaView>
@@ -302,81 +381,47 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     lineHeight: 20,
   },
-  earthContainer: {
+  simulatorContainer: {
     flex: 1,
     position: 'relative',
   },
   webview: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: '#000000',
   },
   loadingContainer: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+    backgroundColor: 'rgba(15, 23, 42, 0.95)',
     gap: 12,
   },
   loadingText: {
     color: '#F3F4F6',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
   },
-  bottomSection: {
+  loadingSubtext: {
+    color: '#94A3B8',
+    fontSize: 14,
+  },
+  instructions: {
     backgroundColor: '#1E293B',
     borderTopWidth: 1,
     borderTopColor: '#334155',
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 16,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
   },
-  searchBar: {
+  instructionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0F172A',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 16,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#F3F4F6',
-  },
-  quickDestinations: {
-    gap: 12,
-  },
-  quickTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#94A3B8',
-  },
-  destinationChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
   },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#0F172A',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#334155',
-    gap: 6,
-  },
-  chipEmoji: {
-    fontSize: 16,
-  },
-  chipText: {
+  instructionText: {
+    fontSize: 12,
     color: '#94A3B8',
-    fontSize: 14,
     fontWeight: '500',
   },
 });
