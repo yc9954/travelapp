@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { Post } from '../types';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const CARD_HEIGHT = SCREEN_HEIGHT * 0.7; // 70% of screen height
+const CARD_HEIGHT = SCREEN_HEIGHT * 0.45; // 45% of screen height
 
 interface InteractiveSceneCardProps {
   post: Post;

@@ -4,9 +4,14 @@ import {
   Text,
   StyleSheet,
   ActivityIndicator,
+  Modal,
+  TouchableOpacity,
+  Dimensions,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Sample asset data (later fetch from API)
 const sampleAssets = [
@@ -19,7 +24,8 @@ const sampleAssets = [
 
 export default function TravelScreen() {
   const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
+  const [selectedAsset, setSelectedAsset] = useState<typeof sampleAssets[0] | null>(null);
+  const [showAssetModal, setShowAssetModal] = useState(false);
 
   const getMapHTML = () => {
     return `
@@ -191,20 +197,83 @@ export default function TravelScreen() {
       if (data.type === 'mapLoaded') {
         console.log('Map loaded successfully');
       } else if (data.type === 'viewAsset') {
-        console.log('Viewing asset:', data.assetId, data.captureUrl);
-        // Navigate to post detail with asset info
-        router.push({
-          pathname: '/(tabs)/feed',
-          params: {
-            assetId: data.assetId,
-            assetName: data.assetName,
-            captureUrl: data.captureUrl
-          }
-        });
+        const asset = sampleAssets.find(a => a.id === data.assetId);
+        if (asset) {
+          setSelectedAsset(asset);
+          setShowAssetModal(true);
+        }
       }
     } catch (e) {
       console.log('[WebView] Message:', event.nativeEvent.data);
     }
+  };
+
+  const get3DViewerHTML = (captureUrl: string) => {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    #canvas-container { width: 100%; height: 100%; }
+    canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  </style>
+</head>
+<body>
+  <div id="canvas-container"></div>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
+        "three/examples/jsm/controls/OrbitControls": "https://unpkg.com/three@0.157.0/examples/jsm/controls/OrbitControls.js",
+        "@lumaai/luma-web": "https://unpkg.com/@lumaai/luma-web@0.2.0/dist/library/luma-web.module.js"
+      }
+    }
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+    import { LumaSplatsThree } from '@lumaai/luma-web';
+
+    let scene = new THREE.Scene();
+    let camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 2;
+
+    let renderer = new THREE.WebGLRenderer({ antialias: false });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+    let controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 1.0;
+
+    let splat = new LumaSplatsThree({
+      source: '${captureUrl}',
+      enableThreeShaderIntegration: false,
+    });
+    scene.add(splat);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    animate();
+  </script>
+</body>
+</html>
+    `;
   };
 
   return (
@@ -231,6 +300,37 @@ export default function TravelScreen() {
           <Text style={styles.loadingText}>Loading map...</Text>
         </View>
       )}
+
+      {/* Asset 3D Viewer Modal */}
+      <Modal
+        visible={showAssetModal}
+        animationType="slide"
+        onRequestClose={() => setShowAssetModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          {/* Header */}
+          <View style={styles.modalHeader}>
+            <TouchableOpacity
+              onPress={() => setShowAssetModal(false)}
+              style={styles.closeButton}
+            >
+              <Ionicons name="close" size={28} color="#F3F4F6" />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>{selectedAsset?.name}</Text>
+            <View style={{ width: 28 }} />
+          </View>
+
+          {/* 3D Viewer */}
+          {selectedAsset && (
+            <WebView
+              source={{ html: get3DViewerHTML(selectedAsset.captureUrl) }}
+              style={styles.viewer3D}
+              scrollEnabled={false}
+              bounces={false}
+            />
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -255,5 +355,34 @@ const styles = StyleSheet.create({
     color: '#F3F4F6',
     fontSize: 16,
     fontWeight: '500',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#0F172A',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E293B',
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#F3F4F6',
+  },
+  viewer3D: {
+    flex: 1,
+    backgroundColor: '#000000',
   },
 });
