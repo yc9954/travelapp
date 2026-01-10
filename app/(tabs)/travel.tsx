@@ -9,6 +9,7 @@ import { WebView } from 'react-native-webview';
 
 export default function TravelScreen() {
   const [isLoading, setIsLoading] = useState(true);
+  const [debugInfo, setDebugInfo] = useState<string>('');
 
   const getCesiumFlightSimulatorHTML = () => {
     return `
@@ -53,34 +54,52 @@ export default function TravelScreen() {
   </div>
 
   <script>
+    // React Native WebView 통신
+    function sendLog(msg) {
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'log', message: msg }));
+      }
+      console.log(msg);
+    }
+
+    sendLog('Starting Cesium initialization...');
+
+    // 에러 핸들링
+    window.onerror = function(msg, url, lineNo, columnNo, error) {
+      const errorMsg = 'Error: ' + msg + ' at line ' + lineNo;
+      sendLog(errorMsg);
+      document.getElementById('hud').innerHTML = '<div style="color:red; font-size:12px;">' + errorMsg + '</div>';
+      return false;
+    };
+
+    // Cesium이 로드되었는지 확인
+    if (typeof Cesium === 'undefined') {
+      sendLog('ERROR: Cesium library not loaded!');
+      document.getElementById('hud').innerHTML = '<div style="color:red;">Cesium library not loaded</div>';
+    } else {
+      sendLog('Cesium library loaded successfully');
+    }
+
     // Cesium Ion token (공개 데모 토큰)
     Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlYWE1OWUxNy1mMWZiLTQzYjYtYTQ0OS1kMWFjYmFkNjc5YzYiLCJpZCI6NTc3MzMsImlhdCI6MTYyNzg0NTE4Mn0.XcKpgANiY19MC4bdFUXMVEBToBmqS8kuYpUlxJHYZxk';
 
-    const viewer = new Cesium.Viewer('cesiumContainer', {
-      terrainProvider: Cesium.createWorldTerrain(),
-      imageryProvider: new Cesium.IonImageryProvider({ assetId: 2 }),
-      baseLayerPicker: false,
-      geocoder: false,
-      homeButton: false,
-      sceneModePicker: false,
-      navigationHelpButton: false,
-      animation: false,
-      timeline: false,
-      fullscreenButton: false,
-      vrButton: false,
-      skyBox: new Cesium.SkyBox({
-        sources: {
-          positiveX: 'https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Assets/Textures/SkyBox/tycho2t3_80_px.jpg',
-          negativeX: 'https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Assets/Textures/SkyBox/tycho2t3_80_mx.jpg',
-          positiveY: 'https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Assets/Textures/SkyBox/tycho2t3_80_py.jpg',
-          negativeY: 'https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Assets/Textures/SkyBox/tycho2t3_80_my.jpg',
-          positiveZ: 'https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Assets/Textures/SkyBox/tycho2t3_80_pz.jpg',
-          negativeZ: 'https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Assets/Textures/SkyBox/tycho2t3_80_mz.jpg'
-        }
-      })
-    });
+    sendLog('Creating Cesium Viewer...');
 
-    viewer.scene.globe.enableLighting = true;
+    try {
+      const viewer = new Cesium.Viewer('cesiumContainer', {
+        baseLayerPicker: false,
+        geocoder: false,
+        homeButton: false,
+        sceneModePicker: false,
+        navigationHelpButton: false,
+        animation: false,
+        timeline: false,
+        fullscreenButton: false,
+        vrButton: false,
+      });
+
+      sendLog('Cesium Viewer created successfully');
+      viewer.scene.globe.enableLighting = true;
 
     // 비행기 초기 위치 (서울 상공)
     let longitude = Cesium.Math.toRadians(126.9780);
@@ -191,16 +210,35 @@ export default function TravelScreen() {
     updateHUD();
     tick();
 
-    // 드래그로 카메라 회전 비활성화 (비행기 뒤에서만 봄)
-    viewer.scene.screenSpaceCameraController.enableRotate = true;
-    viewer.scene.screenSpaceCameraController.enableTranslate = false;
-    viewer.scene.screenSpaceCameraController.enableZoom = false;
-    viewer.scene.screenSpaceCameraController.enableTilt = true;
-    viewer.scene.screenSpaceCameraController.enableLook = true;
+      // 드래그로 카메라 회전 비활성화 (비행기 뒤에서만 봄)
+      viewer.scene.screenSpaceCameraController.enableRotate = true;
+      viewer.scene.screenSpaceCameraController.enableTranslate = false;
+      viewer.scene.screenSpaceCameraController.enableZoom = false;
+      viewer.scene.screenSpaceCameraController.enableTilt = true;
+      viewer.scene.screenSpaceCameraController.enableLook = true;
+
+      sendLog('Flight simulator initialized successfully!');
+
+    } catch (error) {
+      sendLog('ERROR: ' + error.message);
+      document.getElementById('hud').innerHTML = '<div style="color:red; font-size:11px; line-height:1.4;">Error initializing Cesium:<br/>' + error.message + '</div>';
+    }
   </script>
 </body>
 </html>
     `;
+  };
+
+  const handleWebViewMessage = (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === 'log') {
+        console.log('[WebView]', data.message);
+        setDebugInfo(prev => prev + '\n' + data.message);
+      }
+    } catch (e) {
+      console.log('[WebView] Raw message:', event.nativeEvent.data);
+    }
   };
 
   return (
@@ -211,18 +249,29 @@ export default function TravelScreen() {
         style={styles.webview}
         onLoadStart={() => setIsLoading(true)}
         onLoadEnd={() => setIsLoading(false)}
+        onMessage={handleWebViewMessage}
         scrollEnabled={false}
         bounces={false}
         javaScriptEnabled={true}
         domStorageEnabled={true}
         allowsInlineMediaPlayback={true}
         mediaPlaybackRequiresUserAction={false}
+        onError={(syntheticEvent) => {
+          const { nativeEvent } = syntheticEvent;
+          console.error('WebView error:', nativeEvent);
+        }}
       />
       {isLoading && (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#60A5FA" />
           <Text style={styles.loadingText}>Loading Flight Simulator...</Text>
           <Text style={styles.loadingSubtext}>Initializing Cesium terrain...</Text>
+        </View>
+      )}
+      {/* Debug Info */}
+      {debugInfo && !isLoading && (
+        <View style={styles.debugContainer}>
+          <Text style={styles.debugText} numberOfLines={10}>{debugInfo}</Text>
         </View>
       )}
     </View>
@@ -253,5 +302,20 @@ const styles = StyleSheet.create({
   loadingSubtext: {
     color: '#94A3B8',
     fontSize: 14,
+  },
+  debugContainer: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    padding: 12,
+    borderRadius: 8,
+    maxHeight: 200,
+  },
+  debugText: {
+    color: '#60A5FA',
+    fontSize: 10,
+    fontFamily: 'monospace',
   },
 });
