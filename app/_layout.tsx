@@ -1,12 +1,11 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
-import SplashScreen from '../components/SplashScreen';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -15,19 +14,14 @@ export const unstable_settings = {
 function RootNavigator() {
   const colorScheme = useColorScheme();
   const { isAuthenticated, isLoading } = useAuth();
-  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    if (!isLoading && !showSplash) {
+    if (!isLoading) {
       if (!isAuthenticated) {
         router.replace('/(auth)/login');
       }
     }
-  }, [isAuthenticated, isLoading, showSplash]);
-
-  if (showSplash) {
-    return <SplashScreen onFinish={() => setShowSplash(false)} />;
-  }
+  }, [isAuthenticated, isLoading]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
