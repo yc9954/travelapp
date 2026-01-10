@@ -30,32 +30,26 @@ export default function TravelScreen() {
     #cesiumContainer { width: 100%; height: 100%; }
     .controls {
       position: absolute;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(15, 23, 42, 0.95);
-      padding: 20px;
-      border-radius: 16px;
+      bottom: 20px;
+      right: 20px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      gap: 8px;
       z-index: 1000;
     }
     .control-row {
       display: flex;
-      gap: 12px;
-      justify-content: center;
+      gap: 8px;
+      justify-content: flex-end;
     }
     .control-btn {
-      width: 60px;
-      height: 60px;
-      background: rgba(59, 130, 246, 0.8);
-      border: none;
-      border-radius: 12px;
+      width: 48px;
+      height: 48px;
+      background: rgba(59, 130, 246, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
       color: white;
-      font-size: 24px;
+      font-size: 20px;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -63,9 +57,10 @@ export default function TravelScreen() {
       transition: all 0.2s;
       user-select: none;
       -webkit-tap-highlight-color: transparent;
+      backdrop-filter: blur(10px);
     }
     .control-btn:active {
-      background: rgba(96, 165, 250, 1);
+      background: rgba(96, 165, 250, 0.7);
       transform: scale(0.95);
     }
     .speed-display {
@@ -135,6 +130,12 @@ export default function TravelScreen() {
       creditContainer: document.createElement('div'),
     });
 
+    // Disable default mouse interactions for better mobile experience
+    viewer.scene.screenSpaceCameraController.enableRotate = true;
+    viewer.scene.screenSpaceCameraController.enableZoom = true;
+    viewer.scene.screenSpaceCameraController.enableTilt = true;
+    viewer.scene.screenSpaceCameraController.enableLook = true;
+
     // Aircraft model
     const planeModel = viewer.entities.add({
       position: Cesium.Cartesian3.fromDegrees(126.9780, 37.5665, 10000), // Seoul
@@ -150,6 +151,16 @@ export default function TravelScreen() {
     let heading = 0;
     let pitch = 0;
     let position = Cesium.Cartesian3.fromDegrees(126.9780, 37.5665, 10000);
+
+    // Set initial camera view
+    viewer.camera.setView({
+      destination: Cesium.Cartesian3.fromDegrees(126.9780, 37.5665, 15000),
+      orientation: {
+        heading: 0,
+        pitch: -0.5,
+        roll: 0
+      }
+    });
 
     // Update display
     function updateDisplay() {
@@ -199,50 +210,49 @@ export default function TravelScreen() {
       updateDisplay();
     });
 
-    // Controls
-    document.getElementById('forwardBtn').addEventListener('touchstart', function() {
+    // Controls - both touch and click
+    const forwardBtn = document.getElementById('forwardBtn');
+    const leftBtn = document.getElementById('leftBtn');
+    const rightBtn = document.getElementById('rightBtn');
+    const upBtn = document.getElementById('upBtn');
+    const downBtn = document.getElementById('downBtn');
+
+    function addControlListeners(element, handler) {
+      element.addEventListener('touchstart', handler);
+      element.addEventListener('click', handler);
+    }
+
+    addControlListeners(forwardBtn, function(e) {
+      e.preventDefault();
       speed = Math.min(300, speed + 10);
     });
 
-    document.getElementById('leftBtn').addEventListener('touchstart', function() {
+    addControlListeners(leftBtn, function(e) {
+      e.preventDefault();
       heading -= 0.1;
     });
 
-    document.getElementById('rightBtn').addEventListener('touchstart', function() {
+    addControlListeners(rightBtn, function(e) {
+      e.preventDefault();
       heading += 0.1;
     });
 
-    document.getElementById('upBtn').addEventListener('touchstart', function() {
+    addControlListeners(upBtn, function(e) {
+      e.preventDefault();
       pitch = Math.min(Math.PI / 4, pitch + 0.05);
     });
 
-    document.getElementById('downBtn').addEventListener('touchstart', function() {
-      pitch = Math.max(-Math.PI / 4, pitch - 0.05);
-    });
-
-    // Mouse controls for desktop
-    document.getElementById('forwardBtn').addEventListener('click', function() {
-      speed = Math.min(300, speed + 10);
-    });
-
-    document.getElementById('leftBtn').addEventListener('click', function() {
-      heading -= 0.1;
-    });
-
-    document.getElementById('rightBtn').addEventListener('click', function() {
-      heading += 0.1;
-    });
-
-    document.getElementById('upBtn').addEventListener('click', function() {
-      pitch = Math.min(Math.PI / 4, pitch + 0.05);
-    });
-
-    document.getElementById('downBtn').addEventListener('click', function() {
+    addControlListeners(downBtn, function(e) {
+      e.preventDefault();
       pitch = Math.max(-Math.PI / 4, pitch - 0.05);
     });
 
     // Start simulation
     viewer.clock.shouldAnimate = true;
+
+    // Ensure camera is unlocked
+    viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+
     updateDisplay();
   </script>
 </body>
