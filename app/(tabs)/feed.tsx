@@ -1,21 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import {
   View,
-  FlatList,
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
   Text,
   ScrollView,
   Dimensions,
+  TouchableOpacity,
+  Image,
 } from 'react-native';
 import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { InteractiveSceneCard } from '../../components/InteractiveSceneCard';
-import { PostCard } from '../../components/PostCard';
 import { api } from '../../services/api';
 import type { Post } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const GRID_ITEM_WIDTH = (SCREEN_WIDTH - 48) / 2; // 2 columns with padding
 
 export default function FeedScreen() {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -43,35 +45,6 @@ export default function FeedScreen() {
     loadFeed();
   };
 
-  const handleLike = async (postId: string) => {
-    try {
-      const post = posts.find(p => p.id === postId);
-      if (!post) return;
-
-      if (post.isLiked) {
-        await api.unlikePost(postId);
-        setPosts(posts.map(p =>
-          p.id === postId
-            ? { ...p, isLiked: false, likesCount: p.likesCount - 1 }
-            : p
-        ));
-      } else {
-        await api.likePost(postId);
-        setPosts(posts.map(p =>
-          p.id === postId
-            ? { ...p, isLiked: true, likesCount: p.likesCount + 1 }
-            : p
-        ));
-      }
-    } catch (error) {
-      console.error('Failed to toggle like:', error);
-    }
-  };
-
-  const handleComment = (postId: string) => {
-    console.log('Open comments for post:', postId);
-  };
-
   const handleViewPost = (postId: string) => {
     router.push(`/asset-viewer?postId=${postId}`);
   };
@@ -79,7 +52,7 @@ export default function FeedScreen() {
   if (isLoading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#6366F1" />
+        <ActivityIndicator size="large" color="#60A5FA" />
       </View>
     );
   }
@@ -94,7 +67,7 @@ export default function FeedScreen() {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
-            tintColor="#6366F1"
+            tintColor="#60A5FA"
           />
         }
         showsVerticalScrollIndicator={false}
@@ -108,14 +81,32 @@ export default function FeedScreen() {
 
           <View style={styles.grid}>
             {posts.map((item, index) => (
-              <View key={item.id} style={styles.gridItem}>
-                <PostCard
-                  post={item}
-                  onLike={handleLike}
-                  onComment={handleComment}
-                  onViewPost={handleViewPost}
-                />
-              </View>
+              <TouchableOpacity
+                key={item.id}
+                style={styles.gridItem}
+                onPress={() => handleViewPost(item.id)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.imageContainer}>
+                  <Image
+                    source={{ uri: item.imageUrl }}
+                    style={styles.image}
+                    resizeMode="cover"
+                  />
+                  {item.is3D && (
+                    <View style={styles.badge3D}>
+                      <Ionicons name="cube-outline" size={12} color="#FFFFFF" />
+                      <Text style={styles.badge3DText}>3D</Text>
+                    </View>
+                  )}
+                </View>
+                <View style={styles.info}>
+                  <View style={styles.likesContainer}>
+                    <Ionicons name="heart" size={16} color="#EF4444" />
+                    <Text style={styles.likesText}>{item.likesCount}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
             ))}
           </View>
         </View>
@@ -141,7 +132,7 @@ const styles = StyleSheet.create({
   featuredSection: {
     backgroundColor: '#000000',
     paddingTop: 24,
-    paddingBottom: 100, // Extra padding for tab bar
+    paddingBottom: 100,
   },
   sectionTitle: {
     fontSize: 28,
@@ -152,9 +143,54 @@ const styles = StyleSheet.create({
   },
   grid: {
     paddingHorizontal: 16,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 16,
   },
   gridItem: {
+    width: GRID_ITEM_WIDTH,
     marginBottom: 16,
+  },
+  imageContainer: {
+    width: '100%',
+    aspectRatio: 3 / 4,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#1E293B',
+    position: 'relative',
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  badge3D: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(59, 130, 246, 0.9)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  badge3DText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  info: {
+    paddingTop: 8,
+  },
+  likesContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  likesText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
