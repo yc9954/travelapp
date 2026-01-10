@@ -99,11 +99,15 @@ export default function FeedScreen() {
                       <Text style={styles.badge3DText}>3D</Text>
                     </View>
                   )}
-                </View>
-                <View style={styles.info}>
-                  <View style={styles.likesContainer}>
-                    <Ionicons name="heart" size={16} color="#EF4444" />
-                    <Text style={styles.likesText}>{item.likesCount}</Text>
+                  <View style={styles.statsOverlay}>
+                    <View style={styles.statItem}>
+                      <Ionicons name="heart" size={14} color="#FFFFFF" />
+                      <Text style={styles.statText}>{item.likesCount}</Text>
+                    </View>
+                    <View style={styles.statItem}>
+                      <Ionicons name="chatbubble" size={14} color="#FFFFFF" />
+                      <Text style={styles.statText}>{item.commentsCount}</Text>
+                    </View>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -180,17 +184,25 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
   },
-  info: {
-    paddingTop: 8,
+  statsOverlay: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    flexDirection: 'row',
+    gap: 8,
   },
-  likesContainer: {
+  statItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
-  likesText: {
+  statText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '600',
   },
 });
