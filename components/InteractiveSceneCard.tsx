@@ -39,7 +39,7 @@ export function InteractiveSceneCard({ post }: InteractiveSceneCardProps) {
 <!DOCTYPE html>
 <html>
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; }
@@ -78,6 +78,10 @@ export function InteractiveSceneCard({ post }: InteractiveSceneCardProps) {
     controls.dampingFactor = 0.05;
     controls.autoRotate = true;
     controls.autoRotateSpeed = 0.5;
+    controls.enableZoom = true;
+    controls.zoomSpeed = 1.0;
+    controls.minDistance = 0.5;
+    controls.maxDistance = 10;
 
     let splat = new LumaSplatsThree({
       source: '${post.captureUrl || 'https://lumalabs.ai/capture/ca9ea966-ca24-4ec1-ab0f-af665cb546ff'}',
@@ -137,6 +141,8 @@ export function InteractiveSceneCard({ post }: InteractiveSceneCardProps) {
         onLoadEnd={() => setIsLoading(false)}
         scrollEnabled={false}
         bounces={false}
+        scalesPageToFit={true}
+        javaScriptEnabled={true}
       />
 
       {isLoading && (

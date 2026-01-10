@@ -213,7 +213,7 @@ export default function TravelScreen() {
 <!DOCTYPE html>
 <html>
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
@@ -250,6 +250,10 @@ export default function TravelScreen() {
     controls.dampingFactor = 0.05;
     controls.autoRotate = true;
     controls.autoRotateSpeed = 1.0;
+    controls.enableZoom = true;
+    controls.zoomSpeed = 1.0;
+    controls.minDistance = 0.5;
+    controls.maxDistance = 10;
 
     let splat = new LumaSplatsThree({
       source: '${captureUrl}',
@@ -327,6 +331,8 @@ export default function TravelScreen() {
               style={styles.viewer3D}
               scrollEnabled={false}
               bounces={false}
+              scalesPageToFit={true}
+              javaScriptEnabled={true}
             />
           )}
         </View>
