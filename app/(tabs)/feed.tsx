@@ -19,6 +19,65 @@ import type { Post } from '../../types';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const GRID_ITEM_WIDTH = (SCREEN_WIDTH - 48) / 2; // 2 columns with padding
 
+interface GridItemProps {
+  item: Post;
+  onPress: () => void;
+}
+
+function GridItem({ item, onPress }: GridItemProps) {
+  const [imageLoading, setImageLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
+
+  return (
+    <TouchableOpacity
+      style={styles.gridItem}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      <View style={styles.imageContainer}>
+        {imageLoading && (
+          <View style={styles.imageLoadingContainer}>
+            <ActivityIndicator size="small" color="#60A5FA" />
+          </View>
+        )}
+        {imageError ? (
+          <View style={styles.imageErrorContainer}>
+            <Ionicons name="image-outline" size={40} color="#6B7280" />
+          </View>
+        ) : (
+          <Image
+            source={{ uri: item.imageUrl }}
+            style={styles.image}
+            resizeMode="cover"
+            onLoadStart={() => setImageLoading(true)}
+            onLoadEnd={() => setImageLoading(false)}
+            onError={() => {
+              setImageLoading(false);
+              setImageError(true);
+            }}
+          />
+        )}
+        {item.is3D && (
+          <View style={styles.badge3D}>
+            <Ionicons name="cube-outline" size={12} color="#FFFFFF" />
+            <Text style={styles.badge3DText}>3D</Text>
+          </View>
+        )}
+        <View style={styles.statsOverlay}>
+          <View style={styles.statItem}>
+            <Ionicons name="heart" size={14} color="#FFFFFF" />
+            <Text style={styles.statText}>{item.likesCount}</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Ionicons name="chatbubble" size={14} color="#FFFFFF" />
+            <Text style={styles.statText}>{item.commentsCount}</Text>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 export default function FeedScreen() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -80,37 +139,12 @@ export default function FeedScreen() {
           <Text style={styles.sectionTitle}>Featured Scenes</Text>
 
           <View style={styles.grid}>
-            {posts.map((item, index) => (
-              <TouchableOpacity
+            {posts.map((item) => (
+              <GridItem
                 key={item.id}
-                style={styles.gridItem}
+                item={item}
                 onPress={() => handleViewPost(item.id)}
-                activeOpacity={0.8}
-              >
-                <View style={styles.imageContainer}>
-                  <Image
-                    source={{ uri: item.imageUrl }}
-                    style={styles.image}
-                    resizeMode="cover"
-                  />
-                  {item.is3D && (
-                    <View style={styles.badge3D}>
-                      <Ionicons name="cube-outline" size={12} color="#FFFFFF" />
-                      <Text style={styles.badge3DText}>3D</Text>
-                    </View>
-                  )}
-                  <View style={styles.statsOverlay}>
-                    <View style={styles.statItem}>
-                      <Ionicons name="heart" size={14} color="#FFFFFF" />
-                      <Text style={styles.statText}>{item.likesCount}</Text>
-                    </View>
-                    <View style={styles.statItem}>
-                      <Ionicons name="chatbubble" size={14} color="#FFFFFF" />
-                      <Text style={styles.statText}>{item.commentsCount}</Text>
-                    </View>
-                  </View>
-                </View>
-              </TouchableOpacity>
+              />
             ))}
           </View>
         </View>
@@ -166,6 +200,26 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
+  },
+  imageLoadingContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1E293B',
+  },
+  imageErrorContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1E293B',
   },
   badge3D: {
     position: 'absolute',

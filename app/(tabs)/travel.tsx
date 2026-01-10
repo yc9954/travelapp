@@ -12,9 +12,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function TravelScreen() {
   const [isLoading, setIsLoading] = useState(true);
-  const [showControls, setShowControls] = useState(true);
 
-  const getCesiumFlightHTML = () => {
+  const getCesiumFlightSimulatorHTML = () => {
     return `
 <!DOCTYPE html>
 <html lang="en">
@@ -26,64 +25,71 @@ export default function TravelScreen() {
   <link href="https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; font-family: Arial, sans-serif; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
     #cesiumContainer { width: 100%; height: 100%; }
+
+    .hud {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 15px;
+      border-radius: 10px;
+      font-family: monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      z-index: 1000;
+      backdrop-filter: blur(10px);
+    }
+
     .controls {
       position: absolute;
-      bottom: 20px;
-      right: 20px;
+      bottom: 30px;
+      right: 30px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
       z-index: 1000;
     }
+
     .control-row {
       display: flex;
-      gap: 8px;
+      gap: 10px;
       justify-content: flex-end;
     }
+
     .control-btn {
-      width: 48px;
-      height: 48px;
-      background: rgba(59, 130, 246, 0.4);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 10px;
+      width: 60px;
+      height: 60px;
+      background: rgba(59, 130, 246, 0.7);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
       color: white;
-      font-size: 20px;
+      font-size: 24px;
+      font-weight: bold;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.2s;
       user-select: none;
-      -webkit-tap-highlight-color: transparent;
       backdrop-filter: blur(10px);
+      transition: all 0.1s;
     }
+
     .control-btn:active {
-      background: rgba(96, 165, 250, 0.7);
+      background: rgba(96, 165, 250, 0.9);
       transform: scale(0.95);
     }
-    .speed-display {
+
+    .control-label {
       position: absolute;
-      top: 20px;
-      left: 20px;
-      background: rgba(15, 23, 42, 0.9);
-      padding: 12px 20px;
-      border-radius: 12px;
+      bottom: 130px;
+      right: 30px;
+      background: rgba(0, 0, 0, 0.7);
       color: white;
-      font-size: 14px;
-      font-weight: 600;
-      backdrop-filter: blur(10px);
-      z-index: 1000;
-    }
-    .location-display {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      background: rgba(15, 23, 42, 0.9);
-      padding: 12px 20px;
-      border-radius: 12px;
-      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
       font-size: 12px;
       backdrop-filter: blur(10px);
       z-index: 1000;
@@ -92,168 +98,202 @@ export default function TravelScreen() {
 </head>
 <body>
   <div id="cesiumContainer"></div>
-  <div class="speed-display" id="speedDisplay">Speed: 0 km/h</div>
-  <div class="location-display" id="locationDisplay">
-    <div>Lat: 0.00°</div>
-    <div>Lon: 0.00°</div>
-    <div>Alt: 0 m</div>
+
+  <div class="hud" id="hud">
+    <div>✈️ Flight Simulator</div>
+    <div>Speed: <span id="speed">0</span> km/h</div>
+    <div>Altitude: <span id="altitude">0</span> m</div>
+    <div>Lat: <span id="lat">0</span>°</div>
+    <div>Lon: <span id="lon">0</span>°</div>
   </div>
+
+  <div class="control-label">Drag to look around</div>
+
   <div class="controls">
     <div class="control-row">
-      <button class="control-btn" id="upBtn">↑</button>
+      <button class="control-btn" id="pitchUp">↑</button>
     </div>
     <div class="control-row">
-      <button class="control-btn" id="leftBtn">←</button>
-      <button class="control-btn" id="forwardBtn">▲</button>
-      <button class="control-btn" id="rightBtn">→</button>
+      <button class="control-btn" id="yawLeft">←</button>
+      <button class="control-btn" id="speedUp">▲</button>
+      <button class="control-btn" id="yawRight">→</button>
     </div>
     <div class="control-row">
-      <button class="control-btn" id="downBtn">↓</button>
+      <button class="control-btn" id="pitchDown">↓</button>
     </div>
   </div>
 
   <script>
-    // Cesium ion token (public token for demo)
+    // Cesium Ion token (공개 데모 토큰)
     Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlYWE1OWUxNy1mMWZiLTQzYjYtYTQ0OS1kMWFjYmFkNjc5YzYiLCJpZCI6NTc3MzMsImlhdCI6MTYyNzg0NTE4Mn0.XcKpgANiY19MC4bdFUXMVEBToBmqS8kuYpUlxJHYZxk';
 
     const viewer = new Cesium.Viewer('cesiumContainer', {
       terrainProvider: Cesium.createWorldTerrain(),
-      animation: false,
-      timeline: false,
+      imageryProvider: new Cesium.IonImageryProvider({ assetId: 2 }),
       baseLayerPicker: false,
-      fullscreenButton: false,
       geocoder: false,
       homeButton: false,
       sceneModePicker: false,
-      selectionIndicator: false,
       navigationHelpButton: false,
-      creditContainer: document.createElement('div'),
+      animation: false,
+      timeline: false,
+      fullscreenButton: false,
+      vrButton: false,
+      skyBox: new Cesium.SkyBox({
+        sources: {
+          positiveX: 'https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Assets/Textures/SkyBox/tycho2t3_80_px.jpg',
+          negativeX: 'https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Assets/Textures/SkyBox/tycho2t3_80_mx.jpg',
+          positiveY: 'https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Assets/Textures/SkyBox/tycho2t3_80_py.jpg',
+          negativeY: 'https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Assets/Textures/SkyBox/tycho2t3_80_my.jpg',
+          positiveZ: 'https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Assets/Textures/SkyBox/tycho2t3_80_pz.jpg',
+          negativeZ: 'https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Assets/Textures/SkyBox/tycho2t3_80_mz.jpg'
+        }
+      })
     });
 
-    // Disable default mouse interactions for better mobile experience
-    viewer.scene.screenSpaceCameraController.enableRotate = true;
-    viewer.scene.screenSpaceCameraController.enableZoom = true;
-    viewer.scene.screenSpaceCameraController.enableTilt = true;
-    viewer.scene.screenSpaceCameraController.enableLook = true;
+    viewer.scene.globe.enableLighting = true;
 
-    // Aircraft model
-    const planeModel = viewer.entities.add({
-      position: Cesium.Cartesian3.fromDegrees(126.9780, 37.5665, 10000), // Seoul
+    // 비행기 초기 위치 (서울 상공)
+    let longitude = Cesium.Math.toRadians(126.9780);
+    let latitude = Cesium.Math.toRadians(37.5665);
+    let height = 10000.0; // 10km 고도
+
+    // 비행 파라미터
+    let speed = 150.0; // m/s (초기 속도 ~540 km/h)
+    let heading = 0.0;
+    let pitch = 0.0;
+    let roll = 0.0;
+
+    // 비행기 모델 추가
+    const airplane = viewer.entities.add({
+      position: Cesium.Cartesian3.fromRadians(longitude, latitude, height),
       model: {
         uri: 'https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/SampleData/models/CesiumAir/Cesium_Air.glb',
         minimumPixelSize: 128,
-        maximumScale: 20000,
-      },
-    });
-
-    // Flight parameters
-    let speed = 100; // m/s
-    let heading = 0;
-    let pitch = 0;
-    let position = Cesium.Cartesian3.fromDegrees(126.9780, 37.5665, 10000);
-
-    // Set initial camera view
-    viewer.camera.setView({
-      destination: Cesium.Cartesian3.fromDegrees(126.9780, 37.5665, 15000),
-      orientation: {
-        heading: 0,
-        pitch: -0.5,
-        roll: 0
+        maximumScale: 200
       }
     });
 
-    // Update display
-    function updateDisplay() {
-      const cartographic = Cesium.Cartographic.fromCartesian(position);
-      const lat = Cesium.Math.toDegrees(cartographic.latitude).toFixed(2);
-      const lon = Cesium.Math.toDegrees(cartographic.longitude).toFixed(2);
-      const alt = Math.round(cartographic.height);
+    // 카메라를 비행기 뒤에 배치
+    function updateCamera() {
+      const position = Cesium.Cartesian3.fromRadians(longitude, latitude, height);
 
-      document.getElementById('speedDisplay').textContent = 'Speed: ' + Math.round(speed * 3.6) + ' km/h';
-      document.getElementById('locationDisplay').innerHTML =
-        '<div>Lat: ' + lat + '°</div>' +
-        '<div>Lon: ' + lon + '°</div>' +
-        '<div>Alt: ' + alt.toLocaleString() + ' m</div>';
+      // 비행기 방향 계산
+      const hpr = new Cesium.HeadingPitchRoll(heading, pitch, roll);
+      const orientation = Cesium.Transforms.headingPitchRollQuaternion(position, hpr);
+
+      airplane.position = position;
+      airplane.orientation = orientation;
+
+      // 카메라를 비행기 뒤에서 약간 위쪽에 배치
+      const distance = 50.0;
+      const cameraOffset = new Cesium.Cartesian3(-distance, 0, distance * 0.3);
+
+      viewer.scene.camera.lookAtTransform(
+        Cesium.Transforms.eastNorthUpToFixedFrame(position),
+        cameraOffset
+      );
     }
 
-    // Flight simulation
-    viewer.clock.onTick.addEventListener(function(clock) {
-      const deltaTime = Cesium.JulianDate.secondsDifference(clock.currentTime, clock.previousTime);
+    // HUD 업데이트
+    function updateHUD() {
+      document.getElementById('speed').textContent = Math.round(speed * 3.6);
+      document.getElementById('altitude').textContent = Math.round(height);
+      document.getElementById('lat').textContent = Cesium.Math.toDegrees(latitude).toFixed(4);
+      document.getElementById('lon').textContent = Cesium.Math.toDegrees(longitude).toFixed(4);
+    }
 
-      // Calculate new position
-      const cartographic = Cesium.Cartographic.fromCartesian(position);
-      const lat = cartographic.latitude;
-      const lon = cartographic.longitude;
-      const alt = cartographic.height;
-
-      // Update position based on heading and pitch
+    // 비행 물리 시뮬레이션
+    function updateFlight(deltaTime) {
+      // 속도에 따른 이동
       const distance = speed * deltaTime;
-      const deltaLat = Math.cos(heading) * Math.cos(pitch) * distance / 111320;
-      const deltaLon = Math.sin(heading) * Math.cos(pitch) * distance / (111320 * Math.cos(lat));
-      const deltaAlt = Math.sin(pitch) * distance;
 
-      const newLat = lat + deltaLat;
-      const newLon = lon + deltaLon;
-      const newAlt = Math.max(100, alt + deltaAlt); // Minimum altitude 100m
+      // 지구 표면에서의 이동 계산
+      const deltaLon = Math.sin(heading) * Math.cos(pitch) * distance / (111320.0 * Math.cos(latitude));
+      const deltaLat = Math.cos(heading) * Math.cos(pitch) * distance / 111320.0;
+      const deltaHeight = Math.sin(pitch) * distance;
 
-      position = Cesium.Cartesian3.fromRadians(newLon, newLat, newAlt);
-      planeModel.position = position;
+      longitude += deltaLon;
+      latitude += deltaLat;
+      height += deltaHeight;
 
-      // Update orientation
-      const hpr = new Cesium.HeadingPitchRoll(heading, pitch, 0);
-      planeModel.orientation = Cesium.Transforms.headingPitchRollQuaternion(position, hpr);
+      // 최소 고도 제한 (지형 위 500m)
+      if (height < 500) {
+        height = 500;
+        pitch = Math.max(pitch, 0); // 상승만 가능
+      }
 
-      // Update camera
-      const offset = new Cesium.Cartesian3(-100, 0, 30);
-      viewer.camera.lookAt(position, offset);
+      // 최대 고도 제한
+      if (height > 50000) {
+        height = 50000;
+      }
 
-      updateDisplay();
-    });
-
-    // Controls - both touch and click
-    const forwardBtn = document.getElementById('forwardBtn');
-    const leftBtn = document.getElementById('leftBtn');
-    const rightBtn = document.getElementById('rightBtn');
-    const upBtn = document.getElementById('upBtn');
-    const downBtn = document.getElementById('downBtn');
-
-    function addControlListeners(element, handler) {
-      element.addEventListener('touchstart', handler);
-      element.addEventListener('click', handler);
+      // Roll을 heading 변화에 따라 자동 조정 (더 자연스러운 비행)
+      roll = Cesium.Math.lerp(roll, -heading * 0.1, 0.05);
     }
 
-    addControlListeners(forwardBtn, function(e) {
-      e.preventDefault();
-      speed = Math.min(300, speed + 10);
+    // 컨트롤 버튼
+    function addControlListener(id, handler) {
+      const btn = document.getElementById(id);
+      btn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        handler();
+      });
+      btn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        handler();
+      });
+    }
+
+    addControlListener('speedUp', () => {
+      speed = Math.min(speed + 20, 400); // 최대 ~1440 km/h
     });
 
-    addControlListeners(leftBtn, function(e) {
-      e.preventDefault();
+    addControlListener('pitchUp', () => {
+      pitch = Math.min(pitch + 0.05, Math.PI / 6); // 최대 30도 상승
+    });
+
+    addControlListener('pitchDown', () => {
+      pitch = Math.max(pitch - 0.05, -Math.PI / 6); // 최대 30도 하강
+    });
+
+    addControlListener('yawLeft', () => {
       heading -= 0.1;
     });
 
-    addControlListeners(rightBtn, function(e) {
-      e.preventDefault();
+    addControlListener('yawRight', () => {
       heading += 0.1;
     });
 
-    addControlListeners(upBtn, function(e) {
-      e.preventDefault();
-      pitch = Math.min(Math.PI / 4, pitch + 0.05);
-    });
+    // 메인 업데이트 루프
+    let lastTime = performance.now();
 
-    addControlListeners(downBtn, function(e) {
-      e.preventDefault();
-      pitch = Math.max(-Math.PI / 4, pitch - 0.05);
-    });
+    function tick() {
+      const currentTime = performance.now();
+      const deltaTime = (currentTime - lastTime) / 1000.0;
+      lastTime = currentTime;
 
-    // Start simulation
-    viewer.clock.shouldAnimate = true;
+      updateFlight(deltaTime);
+      updateCamera();
+      updateHUD();
 
-    // Ensure camera is unlocked
-    viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+      // Pitch를 천천히 0으로 회귀 (자동 수평 유지)
+      pitch = Cesium.Math.lerp(pitch, 0, 0.02);
 
-    updateDisplay();
+      requestAnimationFrame(tick);
+    }
+
+    // 초기화 및 시작
+    updateCamera();
+    updateHUD();
+    tick();
+
+    // 드래그로 카메라 회전 비활성화 (비행기 뒤에서만 봄)
+    viewer.scene.screenSpaceCameraController.enableRotate = true;
+    viewer.scene.screenSpaceCameraController.enableTranslate = false;
+    viewer.scene.screenSpaceCameraController.enableZoom = false;
+    viewer.scene.screenSpaceCameraController.enableTilt = true;
+    viewer.scene.screenSpaceCameraController.enableLook = true;
   </script>
 </body>
 </html>
@@ -269,14 +309,14 @@ export default function TravelScreen() {
           <Text style={styles.headerTitle}>Flight Simulator</Text>
         </View>
         <Text style={styles.headerSubtitle}>
-          Explore the world with Cesium Flight Simulator
+          Fly around the world with real terrain
         </Text>
       </View>
 
       {/* Cesium Flight Simulator */}
       <View style={styles.simulatorContainer}>
         <WebView
-          source={{ html: getCesiumFlightHTML() }}
+          source={{ html: getCesiumFlightSimulatorHTML() }}
           style={styles.webview}
           onLoadStart={() => setIsLoading(true)}
           onLoadEnd={() => setIsLoading(false)}
@@ -284,36 +324,32 @@ export default function TravelScreen() {
           bounces={false}
           javaScriptEnabled={true}
           domStorageEnabled={true}
+          allowsInlineMediaPlayback={true}
+          mediaPlaybackRequiresUserAction={false}
         />
         {isLoading && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#60A5FA" />
             <Text style={styles.loadingText}>Loading Flight Simulator...</Text>
+            <Text style={styles.loadingSubtext}>Initializing Cesium terrain...</Text>
           </View>
         )}
       </View>
 
       {/* Instructions */}
       <View style={styles.instructions}>
-        <TouchableOpacity
-          style={styles.instructionsToggle}
-          onPress={() => setShowControls(!showControls)}
-        >
-          <Ionicons name="information-circle" size={20} color="#60A5FA" />
-          <Text style={styles.instructionsText}>How to fly</Text>
-          <Ionicons
-            name={showControls ? "chevron-up" : "chevron-down"}
-            size={20}
-            color="#94A3B8"
-          />
-        </TouchableOpacity>
-        {showControls && (
-          <View style={styles.instructionsContent}>
-            <Text style={styles.instructionItem}>▲ Forward - Increase speed</Text>
-            <Text style={styles.instructionItem}>← → - Turn left/right</Text>
-            <Text style={styles.instructionItem}>↑ ↓ - Climb/descend</Text>
-          </View>
-        )}
+        <View style={styles.instructionRow}>
+          <Ionicons name="arrow-up-circle" size={20} color="#60A5FA" />
+          <Text style={styles.instructionText}>▲ Increase speed</Text>
+        </View>
+        <View style={styles.instructionRow}>
+          <Ionicons name="swap-vertical" size={20} color="#60A5FA" />
+          <Text style={styles.instructionText}>↑↓ Climb/Descend</Text>
+        </View>
+        <View style={styles.instructionRow}>
+          <Ionicons name="swap-horizontal" size={20} color="#60A5FA" />
+          <Text style={styles.instructionText}>←→ Turn left/right</Text>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -351,46 +387,41 @@ const styles = StyleSheet.create({
   },
   webview: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: '#000000',
   },
   loadingContainer: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+    backgroundColor: 'rgba(15, 23, 42, 0.95)',
     gap: 12,
   },
   loadingText: {
     color: '#F3F4F6',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
+  },
+  loadingSubtext: {
+    color: '#94A3B8',
+    fontSize: 14,
   },
   instructions: {
     backgroundColor: '#1E293B',
     borderTopWidth: 1,
     borderTopColor: '#334155',
-  },
-  instructionsToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  instructionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
-  instructionsText: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#F3F4F6',
-  },
-  instructionsContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    gap: 8,
-  },
-  instructionItem: {
-    fontSize: 14,
+  instructionText: {
+    fontSize: 12,
     color: '#94A3B8',
-    lineHeight: 20,
+    fontWeight: '500',
   },
 });
