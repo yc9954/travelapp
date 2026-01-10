@@ -9,9 +9,8 @@ import { WebView } from 'react-native-webview';
 
 export default function TravelScreen() {
   const [isLoading, setIsLoading] = useState(true);
-  const [debugInfo, setDebugInfo] = useState<string>('');
 
-  const getCesiumFlightSimulatorHTML = () => {
+  const getThreeJsEarthHTML = () => {
     return `
 <!DOCTYPE html>
 <html lang="en">
@@ -19,12 +18,11 @@ export default function TravelScreen() {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Flight Simulator</title>
-  <script src="https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Cesium.js"></script>
-  <link href="https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; }
-    #cesiumContainer { width: 100%; height: 100%; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    #container { width: 100%; height: 100%; }
 
     .hud {
       position: absolute;
@@ -43,14 +41,14 @@ export default function TravelScreen() {
   </style>
 </head>
 <body>
-  <div id="cesiumContainer"></div>
+  <div id="container"></div>
 
   <div class="hud" id="hud">
     <div>✈️ Flight Simulator</div>
-    <div>Speed: <span id="speed">0</span> km/h</div>
-    <div>Altitude: <span id="altitude">0</span> m</div>
-    <div>Lat: <span id="lat">0</span>°</div>
-    <div>Lon: <span id="lon">0</span>°</div>
+    <div>Speed: <span id="speed">540</span> km/h</div>
+    <div>Altitude: <span id="altitude">10000</span> m</div>
+    <div>Lat: <span id="lat">37.57</span>°</div>
+    <div>Lon: <span id="lon">126.98</span>°</div>
   </div>
 
   <script>
@@ -62,166 +60,194 @@ export default function TravelScreen() {
       console.log(msg);
     }
 
-    sendLog('Starting Cesium initialization...');
+    sendLog('Starting Three.js Earth initialization...');
 
     // 에러 핸들링
     window.onerror = function(msg, url, lineNo, columnNo, error) {
       const errorMsg = 'Error: ' + msg + ' at line ' + lineNo;
       sendLog(errorMsg);
-      document.getElementById('hud').innerHTML = '<div style="color:red; font-size:12px;">' + errorMsg + '</div>';
       return false;
     };
 
-    // Cesium이 로드되었는지 확인
-    if (typeof Cesium === 'undefined') {
-      sendLog('ERROR: Cesium library not loaded!');
-      document.getElementById('hud').innerHTML = '<div style="color:red;">Cesium library not loaded</div>';
+    // Three.js가 로드되었는지 확인
+    if (typeof THREE === 'undefined') {
+      sendLog('ERROR: Three.js library not loaded!');
+      document.getElementById('hud').innerHTML = '<div style="color:red;">Three.js library not loaded</div>';
     } else {
-      sendLog('Cesium library loaded successfully');
+      sendLog('Three.js library loaded successfully');
     }
-
-    // Cesium Ion token (공개 데모 토큰)
-    Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlYWE1OWUxNy1mMWZiLTQzYjYtYTQ0OS1kMWFjYmFkNjc5YzYiLCJpZCI6NTc3MzMsImlhdCI6MTYyNzg0NTE4Mn0.XcKpgANiY19MC4bdFUXMVEBToBmqS8kuYpUlxJHYZxk';
-
-    sendLog('Creating Cesium Viewer...');
 
     try {
-      const viewer = new Cesium.Viewer('cesiumContainer', {
-        baseLayerPicker: false,
-        geocoder: false,
-        homeButton: false,
-        sceneModePicker: false,
-        navigationHelpButton: false,
-        animation: false,
-        timeline: false,
-        fullscreenButton: false,
-        vrButton: false,
+      // Scene, Camera, Renderer 설정
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.getElementById('container').appendChild(renderer.domElement);
+
+      sendLog('Three.js renderer created successfully');
+
+      // 별이 빛나는 우주 배경
+      const starGeometry = new THREE.BufferGeometry();
+      const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 2 });
+      const starVertices = [];
+      for (let i = 0; i < 1000; i++) {
+        const x = (Math.random() - 0.5) * 2000;
+        const y = (Math.random() - 0.5) * 2000;
+        const z = (Math.random() - 0.5) * 2000;
+        starVertices.push(x, y, z);
+      }
+      starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+      const stars = new THREE.Points(starGeometry, starMaterial);
+      scene.add(stars);
+
+      sendLog('Stars added to scene');
+
+      // 지구 만들기
+      const earthGeometry = new THREE.SphereGeometry(50, 64, 64);
+
+      // 지구 텍스처 (간단한 파란색 + 초록색)
+      const earthMaterial = new THREE.MeshPhongMaterial({
+        color: 0x2233ff,
+        emissive: 0x112244,
+        specular: 0x333333,
+        shininess: 25
       });
 
-      sendLog('Cesium Viewer created successfully');
-      viewer.scene.globe.enableLighting = true;
+      const earth = new THREE.Mesh(earthGeometry, earthMaterial);
+      scene.add(earth);
 
-    // 비행기 초기 위치 (서울 상공)
-    let longitude = Cesium.Math.toRadians(126.9780);
-    let latitude = Cesium.Math.toRadians(37.5665);
-    let height = 10000.0; // 10km 고도
+      sendLog('Earth sphere created');
 
-    // 비행 파라미터
-    let speed = 150.0; // m/s (초기 속도 ~540 km/h)
-    let heading = 0.0;
-    let pitch = 0.0;
-    let roll = 0.0;
+      // 구름 레이어
+      const cloudGeometry = new THREE.SphereGeometry(50.5, 64, 64);
+      const cloudMaterial = new THREE.MeshPhongMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.2
+      });
+      const clouds = new THREE.Mesh(cloudGeometry, cloudMaterial);
+      scene.add(clouds);
 
-    // 비행기 모델 추가
-    const airplane = viewer.entities.add({
-      position: Cesium.Cartesian3.fromRadians(longitude, latitude, height),
-      model: {
-        uri: 'https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/SampleData/models/CesiumAir/Cesium_Air.glb',
-        minimumPixelSize: 128,
-        maximumScale: 200
-      }
-    });
+      // 대기 효과
+      const atmosphereGeometry = new THREE.SphereGeometry(52, 64, 64);
+      const atmosphereMaterial = new THREE.MeshPhongMaterial({
+        color: 0x0088ff,
+        transparent: true,
+        opacity: 0.15,
+        side: THREE.BackSide
+      });
+      const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+      scene.add(atmosphere);
 
-    // 카메라를 비행기 뒤에 배치
-    function updateCamera() {
-      const position = Cesium.Cartesian3.fromRadians(longitude, latitude, height);
+      sendLog('Atmosphere added');
 
-      // 비행기 방향 계산
-      const hpr = new Cesium.HeadingPitchRoll(heading, pitch, roll);
-      const orientation = Cesium.Transforms.headingPitchRollQuaternion(position, hpr);
+      // 비행기 만들기 (간단한 삼각형)
+      const planeGeometry = new THREE.ConeGeometry(2, 6, 4);
+      const planeMaterial = new THREE.MeshPhongMaterial({ color: 0xff6600, emissive: 0xff3300 });
+      const airplane = new THREE.Mesh(planeGeometry, planeMaterial);
+      airplane.rotation.x = Math.PI / 2;
+      scene.add(airplane);
 
-      airplane.position = position;
-      airplane.orientation = orientation;
+      sendLog('Airplane created');
 
-      // 카메라를 비행기 뒤에서 약간 위쪽에 배치
-      const distance = 50.0;
-      const cameraOffset = new Cesium.Cartesian3(-distance, 0, distance * 0.3);
+      // 조명
+      const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
+      sunLight.position.set(100, 50, 50);
+      scene.add(sunLight);
 
-      viewer.scene.camera.lookAtTransform(
-        Cesium.Transforms.eastNorthUpToFixedFrame(position),
-        cameraOffset
-      );
-    }
+      const ambientLight = new THREE.AmbientLight(0x404040);
+      scene.add(ambientLight);
 
-    // HUD 업데이트
-    function updateHUD() {
-      document.getElementById('speed').textContent = Math.round(speed * 3.6);
-      document.getElementById('altitude').textContent = Math.round(height);
-      document.getElementById('lat').textContent = Cesium.Math.toDegrees(latitude).toFixed(4);
-      document.getElementById('lon').textContent = Cesium.Math.toDegrees(longitude).toFixed(4);
-    }
+      // 비행 파라미터
+      let longitude = 126.9780 * Math.PI / 180;
+      let latitude = 37.5665 * Math.PI / 180;
+      let altitude = 60; // 지구 반지름 + 고도
+      let heading = 0;
+      let speed = 150;
 
-    // 비행 물리 시뮬레이션
-    function updateFlight(deltaTime) {
-      // 속도에 따른 이동
-      const distance = speed * deltaTime;
+      // 비행기 위치 업데이트
+      function updateAirplane() {
+        // 위도/경도를 3D 좌표로 변환
+        const x = altitude * Math.cos(latitude) * Math.cos(longitude);
+        const y = altitude * Math.sin(latitude);
+        const z = altitude * Math.cos(latitude) * Math.sin(longitude);
 
-      // 지구 표면에서의 이동 계산
-      const deltaLon = Math.sin(heading) * Math.cos(pitch) * distance / (111320.0 * Math.cos(latitude));
-      const deltaLat = Math.cos(heading) * Math.cos(pitch) * distance / 111320.0;
-      const deltaHeight = Math.sin(pitch) * distance;
+        airplane.position.set(x, y, z);
 
-      longitude += deltaLon;
-      latitude += deltaLat;
-      height += deltaHeight;
+        // 비행기가 지구 표면을 향하도록 회전
+        airplane.lookAt(0, 0, 0);
+        airplane.rotateX(Math.PI / 2);
 
-      // 최소 고도 제한 (지형 위 500m)
-      if (height < 500) {
-        height = 500;
-        pitch = Math.max(pitch, 0); // 상승만 가능
-      }
+        // 카메라를 비행기 뒤에 배치
+        const cameraDistance = 30;
+        const cameraX = x * 1.3;
+        const cameraY = y * 1.3;
+        const cameraZ = z * 1.3;
 
-      // 최대 고도 제한
-      if (height > 50000) {
-        height = 50000;
+        camera.position.set(cameraX, cameraY, cameraZ);
+        camera.lookAt(airplane.position);
       }
 
-      // Roll을 heading 변화에 따라 자동 조정 (더 자연스러운 비행)
-      roll = Cesium.Math.lerp(roll, -heading * 0.1, 0.05);
-    }
+      // HUD 업데이트
+      function updateHUD() {
+        const speedKmh = Math.round(speed * 3.6);
+        const altitudeM = Math.round((altitude - 50) * 1000);
+        const latDeg = (latitude * 180 / Math.PI).toFixed(2);
+        const lonDeg = (longitude * 180 / Math.PI).toFixed(2);
 
-    // 자동 비행 모드 - 천천히 앞으로 비행
-    function autoFlight() {
-      speed = 150.0; // 일정한 속도 유지
-      heading += 0.001; // 천천히 우회전하면서 비행
-    }
+        document.getElementById('speed').textContent = speedKmh;
+        document.getElementById('altitude').textContent = altitudeM;
+        document.getElementById('lat').textContent = latDeg;
+        document.getElementById('lon').textContent = lonDeg;
+      }
 
-    // 메인 업데이트 루프
-    let lastTime = performance.now();
+      // 자동 비행
+      function autoFlight(deltaTime) {
+        // 천천히 이동
+        heading += 0.2 * deltaTime;
+        longitude += 0.05 * deltaTime;
 
-    function tick() {
-      const currentTime = performance.now();
-      const deltaTime = (currentTime - lastTime) / 1000.0;
-      lastTime = currentTime;
+        // 지구 자전
+        earth.rotation.y += 0.01 * deltaTime;
+        clouds.rotation.y += 0.012 * deltaTime;
+      }
 
-      autoFlight(); // 자동 비행
-      updateFlight(deltaTime);
-      updateCamera();
+      // 애니메이션 루프
+      let lastTime = performance.now();
+
+      function animate() {
+        requestAnimationFrame(animate);
+
+        const currentTime = performance.now();
+        const deltaTime = (currentTime - lastTime) / 1000.0;
+        lastTime = currentTime;
+
+        autoFlight(deltaTime);
+        updateAirplane();
+        updateHUD();
+
+        renderer.render(scene, camera);
+      }
+
+      // 윈도우 리사이즈 처리
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      // 시작
+      updateAirplane();
       updateHUD();
-
-      // Pitch를 천천히 0으로 회귀 (자동 수평 유지)
-      pitch = Cesium.Math.lerp(pitch, 0, 0.02);
-
-      requestAnimationFrame(tick);
-    }
-
-    // 초기화 및 시작
-    updateCamera();
-    updateHUD();
-    tick();
-
-      // 드래그로 카메라 회전 비활성화 (비행기 뒤에서만 봄)
-      viewer.scene.screenSpaceCameraController.enableRotate = true;
-      viewer.scene.screenSpaceCameraController.enableTranslate = false;
-      viewer.scene.screenSpaceCameraController.enableZoom = false;
-      viewer.scene.screenSpaceCameraController.enableTilt = true;
-      viewer.scene.screenSpaceCameraController.enableLook = true;
+      animate();
 
       sendLog('Flight simulator initialized successfully!');
 
     } catch (error) {
       sendLog('ERROR: ' + error.message);
-      document.getElementById('hud').innerHTML = '<div style="color:red; font-size:11px; line-height:1.4;">Error initializing Cesium:<br/>' + error.message + '</div>';
+      document.getElementById('hud').innerHTML = '<div style="color:red; font-size:11px; line-height:1.4;">Error initializing:<br/>' + error.message + '</div>';
     }
   </script>
 </body>
@@ -234,7 +260,6 @@ export default function TravelScreen() {
       const data = JSON.parse(event.nativeEvent.data);
       if (data.type === 'log') {
         console.log('[WebView]', data.message);
-        setDebugInfo(prev => prev + '\n' + data.message);
       }
     } catch (e) {
       console.log('[WebView] Raw message:', event.nativeEvent.data);
@@ -243,9 +268,9 @@ export default function TravelScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Cesium Flight Simulator - Full Screen */}
+      {/* Three.js Earth Flight Simulator - Full Screen */}
       <WebView
-        source={{ html: getCesiumFlightSimulatorHTML() }}
+        source={{ html: getThreeJsEarthHTML() }}
         style={styles.webview}
         onLoadStart={() => setIsLoading(true)}
         onLoadEnd={() => setIsLoading(false)}
@@ -265,13 +290,7 @@ export default function TravelScreen() {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#60A5FA" />
           <Text style={styles.loadingText}>Loading Flight Simulator...</Text>
-          <Text style={styles.loadingSubtext}>Initializing Cesium terrain...</Text>
-        </View>
-      )}
-      {/* Debug Info */}
-      {debugInfo && !isLoading && (
-        <View style={styles.debugContainer}>
-          <Text style={styles.debugText} numberOfLines={10}>{debugInfo}</Text>
+          <Text style={styles.loadingSubtext}>Initializing 3D Earth...</Text>
         </View>
       )}
     </View>
@@ -302,20 +321,5 @@ const styles = StyleSheet.create({
   loadingSubtext: {
     color: '#94A3B8',
     fontSize: 14,
-  },
-  debugContainer: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    padding: 12,
-    borderRadius: 8,
-    maxHeight: 200,
-  },
-  debugText: {
-    color: '#60A5FA',
-    fontSize: 10,
-    fontFamily: 'monospace',
   },
 });
