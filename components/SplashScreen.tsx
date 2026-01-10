@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, Animated, Image } from 'react-native';
 
 interface SplashScreenProps {
   onFinish: () => void;
@@ -32,13 +31,15 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
-        {/* Logo Icon - Globe/Earth symbol as placeholder */}
-        <View style={styles.logoContainer}>
-          <Ionicons name="earth" size={120} color="#FFFFFF" />
-        </View>
+        {/* Logo Image */}
+        <Image
+          source={require('../assets/images/logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
 
         {/* App Name */}
-        <Text style={styles.appName}>SplatSpace</Text>
+        <Text style={styles.appName}>MUSINSA</Text>
       </Animated.View>
     </View>
   );
@@ -54,13 +55,15 @@ const styles = StyleSheet.create({
   content: {
     alignItems: 'center',
   },
-  logoContainer: {
+  logo: {
+    width: 140,
+    height: 140,
     marginBottom: 32,
   },
   appName: {
-    fontSize: 42,
+    fontSize: 44,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    letterSpacing: 4,
+    letterSpacing: 6,
   },
 });
