@@ -4,20 +4,17 @@ import {
   Text,
   StyleSheet,
   ActivityIndicator,
-  TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
-// 샘플 에셋 데이터 (실제로는 API에서 가져올 데이터)
+// Sample asset data (later fetch from API)
 const sampleAssets = [
-  { id: '1', name: 'Eiffel Tower', lat: 48.8584, lon: 2.2945, captureUrl: 'https://lumalabs.ai/capture/example1' },
-  { id: '2', name: 'Statue of Liberty', lat: 40.6892, lon: -74.0445, captureUrl: 'https://lumalabs.ai/capture/example2' },
-  { id: '3', name: 'Seoul Tower', lat: 37.5512, lon: 126.9882, captureUrl: 'https://lumalabs.ai/capture/example3' },
-  { id: '4', name: 'Tokyo Tower', lat: 35.6586, lon: 139.7454, captureUrl: 'https://lumalabs.ai/capture/example4' },
-  { id: '5', name: 'Sydney Opera', lat: -33.8568, lon: 151.2153, captureUrl: 'https://lumalabs.ai/capture/example5' },
+  { id: '1', name: 'Eiffel Tower', lat: 48.8584, lon: 2.2945, captureUrl: 'https://lumalabs.ai/capture/ca9ea966-ca24-4ec1-ab0f-af665cb546ff' },
+  { id: '2', name: 'Statue of Liberty', lat: 40.6892, lon: -74.0445, captureUrl: 'https://lumalabs.ai/capture/e5b6d44c-43e1-4d1e-b2d5-eca9d334b3fa' },
+  { id: '3', name: 'Seoul Tower', lat: 37.5512, lon: 126.9882, captureUrl: 'https://lumalabs.ai/capture/822bac8d-70c6-404e-aaae-f89f46672c67' },
+  { id: '4', name: 'Tokyo Tower', lat: 35.6586, lon: 139.7454, captureUrl: 'https://lumalabs.ai/capture/9d9e1e45-b089-4e4b-bb7d-ebc2d8cc7f57' },
+  { id: '5', name: 'Sydney Opera', lat: -33.8568, lon: 151.2153, captureUrl: 'https://lumalabs.ai/capture/9dfc3d2d-c6c4-40e6-b23c-c44f3f84af99' },
 ];
 
 export default function TravelScreen() {
@@ -40,76 +37,72 @@ export default function TravelScreen() {
     #map { width: 100vw; height: 100vh; }
 
     .custom-marker {
-      width: 50px;
-      height: 50px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border: 4px solid white;
-      box-shadow: 0 4px 16px rgba(102, 126, 234, 0.6);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
+      background: #60A5FA;
+      border: 3px solid white;
+      box-shadow: 0 2px 8px rgba(96, 165, 250, 0.5);
       cursor: pointer;
-      transition: all 0.3s;
+      transition: all 0.2s;
     }
 
     .custom-marker:hover {
-      transform: scale(1.3);
-      box-shadow: 0 6px 24px rgba(102, 126, 234, 0.9);
+      transform: scale(1.2);
+      box-shadow: 0 4px 16px rgba(96, 165, 250, 0.8);
     }
 
     .leaflet-popup-content-wrapper {
-      background: rgba(15, 23, 42, 0.98);
+      background: rgba(15, 23, 42, 0.96);
       color: white;
-      border-radius: 16px;
+      border-radius: 12px;
       padding: 0;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
     }
 
     .leaflet-popup-tip {
-      background: rgba(15, 23, 42, 0.98);
+      background: rgba(15, 23, 42, 0.96);
+    }
+
+    .leaflet-popup-close-button {
+      color: white !important;
+      font-size: 22px !important;
+      padding: 4px 8px !important;
     }
 
     .asset-popup {
-      padding: 20px;
-      min-width: 240px;
+      padding: 18px;
+      min-width: 220px;
     }
 
     .asset-popup h3 {
-      margin: 0 0 12px 0;
-      font-size: 20px;
-      font-weight: 700;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      margin: 0 0 10px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #F3F4F6;
     }
 
     .asset-popup .location {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 16px;
-      font-size: 13px;
+      margin-bottom: 14px;
+      font-size: 12px;
       color: #94A3B8;
     }
 
     .view-btn {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #60A5FA;
       color: white;
       border: none;
-      padding: 12px 24px;
-      border-radius: 10px;
-      font-weight: 700;
-      font-size: 15px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
       cursor: pointer;
       width: 100%;
       transition: all 0.2s;
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
     }
 
     .view-btn:active {
+      background: #3B82F6;
       transform: scale(0.98);
     }
   </style>
@@ -118,29 +111,34 @@ export default function TravelScreen() {
   <div id='map'></div>
 
   <script>
-    // 다크 테마 지도 초기화
     const map = L.map('map', {
-      center: [37.5665, 126.9780], // Seoul
+      center: [20, 0],
       zoom: 2,
       zoomControl: true,
-      attributionControl: false
+      attributionControl: false,
+      touchZoom: true,
+      scrollWheelZoom: true,
+      doubleClickZoom: true,
+      boxZoom: true
     });
 
-    // CartoDB Dark Matter 타일 레이어 (무료, 토큰 불필요)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    // Mapbox Dark Theme (Get free token at https://account.mapbox.com/access-tokens/)
+    const mapboxToken = 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw';
+
+    L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token=' + mapboxToken, {
       maxZoom: 19,
-      subdomains: 'abcd'
+      tileSize: 512,
+      zoomOffset: -1
     }).addTo(map);
 
     const assets = ${JSON.stringify(sampleAssets)};
 
-    // 커스텀 아이콘으로 마커 추가
     assets.forEach(asset => {
       const icon = L.divIcon({
         className: 'custom-div-icon',
-        html: '<div class="custom-marker">🌍</div>',
-        iconSize: [50, 50],
-        iconAnchor: [25, 25]
+        html: '<div class="custom-marker"></div>',
+        iconSize: [40, 40],
+        iconAnchor: [20, 20]
       });
 
       const marker = L.marker([asset.lat, asset.lon], { icon: icon })
@@ -149,33 +147,30 @@ export default function TravelScreen() {
       const popupContent = \`
         <div class="asset-popup">
           <h3>\${asset.name}</h3>
-          <div class="location">
-            <span>📍</span>
-            <span>\${asset.lat.toFixed(4)}°, \${asset.lon.toFixed(4)}°</span>
-          </div>
-          <button class="view-btn" onclick="viewAsset('\${asset.id}', '\${asset.name}')">
-            🚀 View in 3D
+          <div class="location">\${asset.lat.toFixed(2)}°, \${asset.lon.toFixed(2)}°</div>
+          <button class="view-btn" onclick="viewAsset('\${asset.id}', '\${asset.name}', '\${asset.captureUrl}')">
+            View in 3D
           </button>
         </div>
       \`;
 
       marker.bindPopup(popupContent, {
-        maxWidth: 300,
+        maxWidth: 260,
         className: 'custom-popup'
       });
     });
 
-    function viewAsset(id, name) {
+    function viewAsset(id, name, captureUrl) {
       if (window.ReactNativeWebView) {
         window.ReactNativeWebView.postMessage(JSON.stringify({
           type: 'viewAsset',
           assetId: id,
-          assetName: name
+          assetName: name,
+          captureUrl: captureUrl
         }));
       }
     }
 
-    // 지도 로드 완료
     setTimeout(() => {
       if (window.ReactNativeWebView) {
         window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'mapLoaded' }));
@@ -194,24 +189,16 @@ export default function TravelScreen() {
       if (data.type === 'mapLoaded') {
         console.log('Map loaded successfully');
       } else if (data.type === 'viewAsset') {
-        Alert.alert(
-          data.assetName,
-          'Opening 3D view...',
-          [
-            {
-              text: 'Cancel',
-              style: 'cancel'
-            },
-            {
-              text: 'View',
-              onPress: () => {
-                // 실제로는 해당 에셋의 상세 화면으로 이동
-                console.log('Viewing asset:', data.assetId);
-                // router.push(`/asset/${data.assetId}`);
-              }
-            }
-          ]
-        );
+        console.log('Viewing asset:', data.assetId, data.captureUrl);
+        // Navigate to post detail with asset info
+        router.push({
+          pathname: '/(tabs)/feed',
+          params: {
+            assetId: data.assetId,
+            assetName: data.assetName,
+            captureUrl: data.captureUrl
+          }
+        });
       }
     } catch (e) {
       console.log('[WebView] Message:', event.nativeEvent.data);
@@ -220,7 +207,6 @@ export default function TravelScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Map */}
       <WebView
         source={{ html: getMapHTML() }}
         style={styles.webview}
@@ -237,24 +223,12 @@ export default function TravelScreen() {
           console.error('WebView error:', nativeEvent);
         }}
       />
-
-      {/* Loading */}
       {isLoading && (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#667eea" />
-          <Text style={styles.loadingText}>Loading Map...</Text>
+          <ActivityIndicator size="large" color="#60A5FA" />
+          <Text style={styles.loadingText}>Loading map...</Text>
         </View>
       )}
-
-      {/* Info Overlay */}
-      <View style={styles.infoOverlay}>
-        <View style={styles.infoCard}>
-          <Ionicons name="location" size={24} color="#667eea" />
-          <Text style={styles.infoText}>
-            Tap markers to explore 3D assets around the world
-          </Text>
-        </View>
-      </View>
     </View>
   );
 }
@@ -277,32 +251,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     color: '#F3F4F6',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  infoOverlay: {
-    position: 'absolute',
-    top: 20,
-    left: 20,
-    right: 20,
-  },
-  infoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.9)',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  infoText: {
-    flex: 1,
-    color: '#F3F4F6',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '500',
   },
 });
