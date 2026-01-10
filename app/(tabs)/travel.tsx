@@ -3,12 +3,9 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
-import { Ionicons } from '@expo/vector-icons';
 
 export default function TravelScreen() {
   const [isLoading, setIsLoading] = useState(true);
@@ -32,7 +29,7 @@ export default function TravelScreen() {
       position: absolute;
       top: 20px;
       left: 20px;
-      background: rgba(0, 0, 0, 0.8);
+      background: rgba(0, 0, 0, 0.7);
       color: white;
       padding: 15px;
       border-radius: 10px;
@@ -41,58 +38,6 @@ export default function TravelScreen() {
       line-height: 1.6;
       z-index: 1000;
       backdrop-filter: blur(10px);
-    }
-
-    .controls {
-      position: absolute;
-      bottom: 30px;
-      right: 30px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      z-index: 1000;
-    }
-
-    .control-row {
-      display: flex;
-      gap: 10px;
-      justify-content: flex-end;
-    }
-
-    .control-btn {
-      width: 60px;
-      height: 60px;
-      background: rgba(59, 130, 246, 0.7);
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-radius: 12px;
-      color: white;
-      font-size: 24px;
-      font-weight: bold;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      user-select: none;
-      backdrop-filter: blur(10px);
-      transition: all 0.1s;
-    }
-
-    .control-btn:active {
-      background: rgba(96, 165, 250, 0.9);
-      transform: scale(0.95);
-    }
-
-    .control-label {
-      position: absolute;
-      bottom: 130px;
-      right: 30px;
-      background: rgba(0, 0, 0, 0.7);
-      color: white;
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-size: 12px;
-      backdrop-filter: blur(10px);
-      z-index: 1000;
     }
   </style>
 </head>
@@ -105,22 +50,6 @@ export default function TravelScreen() {
     <div>Altitude: <span id="altitude">0</span> m</div>
     <div>Lat: <span id="lat">0</span>°</div>
     <div>Lon: <span id="lon">0</span>°</div>
-  </div>
-
-  <div class="control-label">Drag to look around</div>
-
-  <div class="controls">
-    <div class="control-row">
-      <button class="control-btn" id="pitchUp">↑</button>
-    </div>
-    <div class="control-row">
-      <button class="control-btn" id="yawLeft">←</button>
-      <button class="control-btn" id="speedUp">▲</button>
-      <button class="control-btn" id="yawRight">→</button>
-    </div>
-    <div class="control-row">
-      <button class="control-btn" id="pitchDown">↓</button>
-    </div>
   </div>
 
   <script>
@@ -232,38 +161,11 @@ export default function TravelScreen() {
       roll = Cesium.Math.lerp(roll, -heading * 0.1, 0.05);
     }
 
-    // 컨트롤 버튼
-    function addControlListener(id, handler) {
-      const btn = document.getElementById(id);
-      btn.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        handler();
-      });
-      btn.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        handler();
-      });
+    // 자동 비행 모드 - 천천히 앞으로 비행
+    function autoFlight() {
+      speed = 150.0; // 일정한 속도 유지
+      heading += 0.001; // 천천히 우회전하면서 비행
     }
-
-    addControlListener('speedUp', () => {
-      speed = Math.min(speed + 20, 400); // 최대 ~1440 km/h
-    });
-
-    addControlListener('pitchUp', () => {
-      pitch = Math.min(pitch + 0.05, Math.PI / 6); // 최대 30도 상승
-    });
-
-    addControlListener('pitchDown', () => {
-      pitch = Math.max(pitch - 0.05, -Math.PI / 6); // 최대 30도 하강
-    });
-
-    addControlListener('yawLeft', () => {
-      heading -= 0.1;
-    });
-
-    addControlListener('yawRight', () => {
-      heading += 0.1;
-    });
 
     // 메인 업데이트 루프
     let lastTime = performance.now();
@@ -273,6 +175,7 @@ export default function TravelScreen() {
       const deltaTime = (currentTime - lastTime) / 1000.0;
       lastTime = currentTime;
 
+      autoFlight(); // 자동 비행
       updateFlight(deltaTime);
       updateCamera();
       updateHUD();
@@ -301,89 +204,35 @@ export default function TravelScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <Ionicons name="airplane" size={28} color="#60A5FA" />
-          <Text style={styles.headerTitle}>Flight Simulator</Text>
+    <View style={styles.container}>
+      {/* Cesium Flight Simulator - Full Screen */}
+      <WebView
+        source={{ html: getCesiumFlightSimulatorHTML() }}
+        style={styles.webview}
+        onLoadStart={() => setIsLoading(true)}
+        onLoadEnd={() => setIsLoading(false)}
+        scrollEnabled={false}
+        bounces={false}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+        allowsInlineMediaPlayback={true}
+        mediaPlaybackRequiresUserAction={false}
+      />
+      {isLoading && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#60A5FA" />
+          <Text style={styles.loadingText}>Loading Flight Simulator...</Text>
+          <Text style={styles.loadingSubtext}>Initializing Cesium terrain...</Text>
         </View>
-        <Text style={styles.headerSubtitle}>
-          Fly around the world with real terrain
-        </Text>
-      </View>
-
-      {/* Cesium Flight Simulator */}
-      <View style={styles.simulatorContainer}>
-        <WebView
-          source={{ html: getCesiumFlightSimulatorHTML() }}
-          style={styles.webview}
-          onLoadStart={() => setIsLoading(true)}
-          onLoadEnd={() => setIsLoading(false)}
-          scrollEnabled={false}
-          bounces={false}
-          javaScriptEnabled={true}
-          domStorageEnabled={true}
-          allowsInlineMediaPlayback={true}
-          mediaPlaybackRequiresUserAction={false}
-        />
-        {isLoading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#60A5FA" />
-            <Text style={styles.loadingText}>Loading Flight Simulator...</Text>
-            <Text style={styles.loadingSubtext}>Initializing Cesium terrain...</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Instructions */}
-      <View style={styles.instructions}>
-        <View style={styles.instructionRow}>
-          <Ionicons name="arrow-up-circle" size={20} color="#60A5FA" />
-          <Text style={styles.instructionText}>▲ Increase speed</Text>
-        </View>
-        <View style={styles.instructionRow}>
-          <Ionicons name="swap-vertical" size={20} color="#60A5FA" />
-          <Text style={styles.instructionText}>↑↓ Climb/Descend</Text>
-        </View>
-        <View style={styles.instructionRow}>
-          <Ionicons name="swap-horizontal" size={20} color="#60A5FA" />
-          <Text style={styles.instructionText}>←→ Turn left/right</Text>
-        </View>
-      </View>
-    </SafeAreaView>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    gap: 12,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#F3F4F6',
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#94A3B8',
-    lineHeight: 20,
-  },
-  simulatorContainer: {
-    flex: 1,
-    position: 'relative',
+    backgroundColor: '#000000',
   },
   webview: {
     flex: 1,
@@ -393,7 +242,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
     gap: 12,
   },
   loadingText: {
@@ -404,24 +253,5 @@ const styles = StyleSheet.create({
   loadingSubtext: {
     color: '#94A3B8',
     fontSize: 14,
-  },
-  instructions: {
-    backgroundColor: '#1E293B',
-    borderTopWidth: 1,
-    borderTopColor: '#334155',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  instructionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  instructionText: {
-    fontSize: 12,
-    color: '#94A3B8',
-    fontWeight: '500',
   },
 });
