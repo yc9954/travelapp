@@ -4,225 +4,183 @@ import {
   Text,
   StyleSheet,
   ActivityIndicator,
+  TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+
+// 샘플 에셋 데이터 (실제로는 API에서 가져올 데이터)
+const sampleAssets = [
+  { id: '1', name: 'Eiffel Tower', lat: 48.8584, lon: 2.2945, captureUrl: 'https://lumalabs.ai/capture/example1' },
+  { id: '2', name: 'Statue of Liberty', lat: 40.6892, lon: -74.0445, captureUrl: 'https://lumalabs.ai/capture/example2' },
+  { id: '3', name: 'Seoul Tower', lat: 37.5512, lon: 126.9882, captureUrl: 'https://lumalabs.ai/capture/example3' },
+  { id: '4', name: 'Tokyo Tower', lat: 35.6586, lon: 139.7454, captureUrl: 'https://lumalabs.ai/capture/example4' },
+  { id: '5', name: 'Sydney Opera', lat: -33.8568, lon: 151.2153, captureUrl: 'https://lumalabs.ai/capture/example5' },
+];
 
 export default function TravelScreen() {
   const [isLoading, setIsLoading] = useState(true);
-  const [debugInfo, setDebugInfo] = useState<string>('');
+  const router = useRouter();
 
-  const getCesiumFlightSimulatorHTML = () => {
+  const getMapHTML = () => {
     return `
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Flight Simulator</title>
-  <script src="https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Cesium.js"></script>
-  <link href="https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+  <title>Travel Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; }
-    #cesiumContainer { width: 100%; height: 100%; }
+    body { overflow: hidden; background: #000; }
+    #map { width: 100vw; height: 100vh; }
 
-    .hud {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      background: rgba(0, 0, 0, 0.7);
+    .custom-marker {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: 4px solid white;
+      box-shadow: 0 4px 16px rgba(102, 126, 234, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .custom-marker:hover {
+      transform: scale(1.3);
+      box-shadow: 0 6px 24px rgba(102, 126, 234, 0.9);
+    }
+
+    .leaflet-popup-content-wrapper {
+      background: rgba(15, 23, 42, 0.98);
       color: white;
-      padding: 15px;
+      border-radius: 16px;
+      padding: 0;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+
+    .leaflet-popup-tip {
+      background: rgba(15, 23, 42, 0.98);
+    }
+
+    .asset-popup {
+      padding: 20px;
+      min-width: 240px;
+    }
+
+    .asset-popup h3 {
+      margin: 0 0 12px 0;
+      font-size: 20px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .asset-popup .location {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: #94A3B8;
+    }
+
+    .view-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
       border-radius: 10px;
-      font-family: monospace;
-      font-size: 14px;
-      line-height: 1.6;
-      z-index: 1000;
-      backdrop-filter: blur(10px);
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .view-btn:active {
+      transform: scale(0.98);
     }
   </style>
 </head>
 <body>
-  <div id="cesiumContainer"></div>
-
-  <div class="hud" id="hud">
-    <div>✈️ Flight Simulator</div>
-    <div>Speed: <span id="speed">0</span> km/h</div>
-    <div>Altitude: <span id="altitude">0</span> m</div>
-    <div>Lat: <span id="lat">0</span>°</div>
-    <div>Lon: <span id="lon">0</span>°</div>
-  </div>
+  <div id='map'></div>
 
   <script>
-    // React Native WebView 통신
-    function sendLog(msg) {
-      if (window.ReactNativeWebView) {
-        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'log', message: msg }));
-      }
-      console.log(msg);
-    }
-
-    sendLog('Starting Cesium initialization...');
-
-    // 에러 핸들링
-    window.onerror = function(msg, url, lineNo, columnNo, error) {
-      const errorMsg = 'Error: ' + msg + ' at line ' + lineNo;
-      sendLog(errorMsg);
-      document.getElementById('hud').innerHTML = '<div style="color:red; font-size:12px;">' + errorMsg + '</div>';
-      return false;
-    };
-
-    // Cesium이 로드되었는지 확인
-    if (typeof Cesium === 'undefined') {
-      sendLog('ERROR: Cesium library not loaded!');
-      document.getElementById('hud').innerHTML = '<div style="color:red;">Cesium library not loaded</div>';
-    } else {
-      sendLog('Cesium library loaded successfully');
-    }
-
-    // Cesium Ion token (공개 데모 토큰)
-    Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlYWE1OWUxNy1mMWZiLTQzYjYtYTQ0OS1kMWFjYmFkNjc5YzYiLCJpZCI6NTc3MzMsImlhdCI6MTYyNzg0NTE4Mn0.XcKpgANiY19MC4bdFUXMVEBToBmqS8kuYpUlxJHYZxk';
-
-    sendLog('Creating Cesium Viewer...');
-
-    try {
-      const viewer = new Cesium.Viewer('cesiumContainer', {
-        baseLayerPicker: false,
-        geocoder: false,
-        homeButton: false,
-        sceneModePicker: false,
-        navigationHelpButton: false,
-        animation: false,
-        timeline: false,
-        fullscreenButton: false,
-        vrButton: false,
-      });
-
-      sendLog('Cesium Viewer created successfully');
-      viewer.scene.globe.enableLighting = true;
-
-    // 비행기 초기 위치 (서울 상공)
-    let longitude = Cesium.Math.toRadians(126.9780);
-    let latitude = Cesium.Math.toRadians(37.5665);
-    let height = 10000.0; // 10km 고도
-
-    // 비행 파라미터
-    let speed = 150.0; // m/s (초기 속도 ~540 km/h)
-    let heading = 0.0;
-    let pitch = 0.0;
-    let roll = 0.0;
-
-    // 비행기 모델 추가
-    const airplane = viewer.entities.add({
-      position: Cesium.Cartesian3.fromRadians(longitude, latitude, height),
-      model: {
-        uri: 'https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/SampleData/models/CesiumAir/Cesium_Air.glb',
-        minimumPixelSize: 128,
-        maximumScale: 200
-      }
+    // 다크 테마 지도 초기화
+    const map = L.map('map', {
+      center: [37.5665, 126.9780], // Seoul
+      zoom: 2,
+      zoomControl: true,
+      attributionControl: false
     });
 
-    // 카메라를 비행기 뒤에 배치
-    function updateCamera() {
-      const position = Cesium.Cartesian3.fromRadians(longitude, latitude, height);
+    // CartoDB Dark Matter 타일 레이어 (무료, 토큰 불필요)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19,
+      subdomains: 'abcd'
+    }).addTo(map);
 
-      // 비행기 방향 계산
-      const hpr = new Cesium.HeadingPitchRoll(heading, pitch, roll);
-      const orientation = Cesium.Transforms.headingPitchRollQuaternion(position, hpr);
+    const assets = ${JSON.stringify(sampleAssets)};
 
-      airplane.position = position;
-      airplane.orientation = orientation;
+    // 커스텀 아이콘으로 마커 추가
+    assets.forEach(asset => {
+      const icon = L.divIcon({
+        className: 'custom-div-icon',
+        html: '<div class="custom-marker">🌍</div>',
+        iconSize: [50, 50],
+        iconAnchor: [25, 25]
+      });
 
-      // 카메라를 비행기 뒤에서 약간 위쪽에 배치
-      const distance = 50.0;
-      const cameraOffset = new Cesium.Cartesian3(-distance, 0, distance * 0.3);
+      const marker = L.marker([asset.lat, asset.lon], { icon: icon })
+        .addTo(map);
 
-      viewer.scene.camera.lookAtTransform(
-        Cesium.Transforms.eastNorthUpToFixedFrame(position),
-        cameraOffset
-      );
-    }
+      const popupContent = \`
+        <div class="asset-popup">
+          <h3>\${asset.name}</h3>
+          <div class="location">
+            <span>📍</span>
+            <span>\${asset.lat.toFixed(4)}°, \${asset.lon.toFixed(4)}°</span>
+          </div>
+          <button class="view-btn" onclick="viewAsset('\${asset.id}', '\${asset.name}')">
+            🚀 View in 3D
+          </button>
+        </div>
+      \`;
 
-    // HUD 업데이트
-    function updateHUD() {
-      document.getElementById('speed').textContent = Math.round(speed * 3.6);
-      document.getElementById('altitude').textContent = Math.round(height);
-      document.getElementById('lat').textContent = Cesium.Math.toDegrees(latitude).toFixed(4);
-      document.getElementById('lon').textContent = Cesium.Math.toDegrees(longitude).toFixed(4);
-    }
+      marker.bindPopup(popupContent, {
+        maxWidth: 300,
+        className: 'custom-popup'
+      });
+    });
 
-    // 비행 물리 시뮬레이션
-    function updateFlight(deltaTime) {
-      // 속도에 따른 이동
-      const distance = speed * deltaTime;
-
-      // 지구 표면에서의 이동 계산
-      const deltaLon = Math.sin(heading) * Math.cos(pitch) * distance / (111320.0 * Math.cos(latitude));
-      const deltaLat = Math.cos(heading) * Math.cos(pitch) * distance / 111320.0;
-      const deltaHeight = Math.sin(pitch) * distance;
-
-      longitude += deltaLon;
-      latitude += deltaLat;
-      height += deltaHeight;
-
-      // 최소 고도 제한 (지형 위 500m)
-      if (height < 500) {
-        height = 500;
-        pitch = Math.max(pitch, 0); // 상승만 가능
+    function viewAsset(id, name) {
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'viewAsset',
+          assetId: id,
+          assetName: name
+        }));
       }
+    }
 
-      // 최대 고도 제한
-      if (height > 50000) {
-        height = 50000;
+    // 지도 로드 완료
+    setTimeout(() => {
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'mapLoaded' }));
       }
-
-      // Roll을 heading 변화에 따라 자동 조정 (더 자연스러운 비행)
-      roll = Cesium.Math.lerp(roll, -heading * 0.1, 0.05);
-    }
-
-    // 자동 비행 모드 - 천천히 앞으로 비행
-    function autoFlight() {
-      speed = 150.0; // 일정한 속도 유지
-      heading += 0.001; // 천천히 우회전하면서 비행
-    }
-
-    // 메인 업데이트 루프
-    let lastTime = performance.now();
-
-    function tick() {
-      const currentTime = performance.now();
-      const deltaTime = (currentTime - lastTime) / 1000.0;
-      lastTime = currentTime;
-
-      autoFlight(); // 자동 비행
-      updateFlight(deltaTime);
-      updateCamera();
-      updateHUD();
-
-      // Pitch를 천천히 0으로 회귀 (자동 수평 유지)
-      pitch = Cesium.Math.lerp(pitch, 0, 0.02);
-
-      requestAnimationFrame(tick);
-    }
-
-    // 초기화 및 시작
-    updateCamera();
-    updateHUD();
-    tick();
-
-      // 드래그로 카메라 회전 비활성화 (비행기 뒤에서만 봄)
-      viewer.scene.screenSpaceCameraController.enableRotate = true;
-      viewer.scene.screenSpaceCameraController.enableTranslate = false;
-      viewer.scene.screenSpaceCameraController.enableZoom = false;
-      viewer.scene.screenSpaceCameraController.enableTilt = true;
-      viewer.scene.screenSpaceCameraController.enableLook = true;
-
-      sendLog('Flight simulator initialized successfully!');
-
-    } catch (error) {
-      sendLog('ERROR: ' + error.message);
-      document.getElementById('hud').innerHTML = '<div style="color:red; font-size:11px; line-height:1.4;">Error initializing Cesium:<br/>' + error.message + '</div>';
-    }
+    }, 500);
   </script>
 </body>
 </html>
@@ -232,20 +190,39 @@ export default function TravelScreen() {
   const handleWebViewMessage = (event: any) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
-      if (data.type === 'log') {
-        console.log('[WebView]', data.message);
-        setDebugInfo(prev => prev + '\n' + data.message);
+
+      if (data.type === 'mapLoaded') {
+        console.log('Map loaded successfully');
+      } else if (data.type === 'viewAsset') {
+        Alert.alert(
+          data.assetName,
+          'Opening 3D view...',
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel'
+            },
+            {
+              text: 'View',
+              onPress: () => {
+                // 실제로는 해당 에셋의 상세 화면으로 이동
+                console.log('Viewing asset:', data.assetId);
+                // router.push(`/asset/${data.assetId}`);
+              }
+            }
+          ]
+        );
       }
     } catch (e) {
-      console.log('[WebView] Raw message:', event.nativeEvent.data);
+      console.log('[WebView] Message:', event.nativeEvent.data);
     }
   };
 
   return (
     <View style={styles.container}>
-      {/* Cesium Flight Simulator - Full Screen */}
+      {/* Map */}
       <WebView
-        source={{ html: getCesiumFlightSimulatorHTML() }}
+        source={{ html: getMapHTML() }}
         style={styles.webview}
         onLoadStart={() => setIsLoading(true)}
         onLoadEnd={() => setIsLoading(false)}
@@ -254,26 +231,30 @@ export default function TravelScreen() {
         bounces={false}
         javaScriptEnabled={true}
         domStorageEnabled={true}
-        allowsInlineMediaPlayback={true}
-        mediaPlaybackRequiresUserAction={false}
+        geolocationEnabled={true}
         onError={(syntheticEvent) => {
           const { nativeEvent } = syntheticEvent;
           console.error('WebView error:', nativeEvent);
         }}
       />
+
+      {/* Loading */}
       {isLoading && (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#60A5FA" />
-          <Text style={styles.loadingText}>Loading Flight Simulator...</Text>
-          <Text style={styles.loadingSubtext}>Initializing Cesium terrain...</Text>
+          <ActivityIndicator size="large" color="#667eea" />
+          <Text style={styles.loadingText}>Loading Map...</Text>
         </View>
       )}
-      {/* Debug Info */}
-      {debugInfo && !isLoading && (
-        <View style={styles.debugContainer}>
-          <Text style={styles.debugText} numberOfLines={10}>{debugInfo}</Text>
+
+      {/* Info Overlay */}
+      <View style={styles.infoOverlay}>
+        <View style={styles.infoCard}>
+          <Ionicons name="location" size={24} color="#667eea" />
+          <Text style={styles.infoText}>
+            Tap markers to explore 3D assets around the world
+          </Text>
         </View>
-      )}
+      </View>
     </View>
   );
 }
@@ -299,23 +280,29 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
-  loadingSubtext: {
-    color: '#94A3B8',
-    fontSize: 14,
-  },
-  debugContainer: {
+  infoOverlay: {
     position: 'absolute',
-    bottom: 20,
+    top: 20,
     left: 20,
     right: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    padding: 12,
-    borderRadius: 8,
-    maxHeight: 200,
   },
-  debugText: {
-    color: '#60A5FA',
-    fontSize: 10,
-    fontFamily: 'monospace',
+  infoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  infoText: {
+    flex: 1,
+    color: '#F3F4F6',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
