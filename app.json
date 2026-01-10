@@ -1,21 +1,21 @@
 {
   "expo": {
-    "name": "TravelSpace 3D",
-    "slug": "travelspace-3d",
+    "name": "SplatSpace",
+    "slug": "splatspace",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "travelspace3d",
+    "icon": "./assets/images/logo.png",
+    "scheme": "splatspace",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.travelspace3d.app"
+      "bundleIdentifier": "com.splatspace.app"
     },
     "android": {
-      "package": "com.travelspace3d.app",
+      "package": "com.splatspace.app",
       "adaptiveIcon": {
-        "backgroundColor": "#6366F1",
+        "backgroundColor": "#000000",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -38,12 +38,12 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/logo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#6366F1",
+          "backgroundColor": "#000000",
           "dark": {
-            "backgroundColor": "#1e1b4b"
+            "backgroundColor": "#000000"
           }
         }
       ],
