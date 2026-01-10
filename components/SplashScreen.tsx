@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Image } from 'react-native';
+import { Animated, Image, StyleSheet, Text, View } from 'react-native';
 
 interface SplashScreenProps {
   onFinish: () => void;
@@ -54,16 +54,17 @@ const styles = StyleSheet.create({
   },
   content: {
     alignItems: 'center',
+    transform: [{ translateY: -80 }],
   },
   logo: {
-    width: 140,
-    height: 140,
-    marginBottom: 32,
+    width: 400,
+    height: 400,
+    marginBottom: -100,
   },
   appName: {
-    fontSize: 44,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '300',
     color: '#FFFFFF',
-    letterSpacing: 6,
+    letterSpacing: 8,
   },
 });
