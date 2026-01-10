@@ -130,13 +130,11 @@ export default function TravelScreen() {
       boxZoom: true
     });
 
-    // Mapbox Dark Theme (Get free token at https://account.mapbox.com/access-tokens/)
-    const mapboxToken = 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw';
-
-    L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token=' + mapboxToken, {
-      maxZoom: 19,
-      tileSize: 512,
-      zoomOffset: -1
+    // OpenStreetMap Dark Theme (No token required, completely free)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+      subdomains: 'abcd',
+      maxZoom: 19
     }).addTo(map);
 
     const assets = ${JSON.stringify(sampleAssets)};
