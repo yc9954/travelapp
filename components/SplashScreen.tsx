@@ -39,7 +39,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
         />
 
         {/* App Name */}
-        <Text style={styles.appName}>MUSINSA</Text>
+        <Text style={styles.appName}>SplatSpace</Text>
       </Animated.View>
     </View>
   );
