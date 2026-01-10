@@ -112,8 +112,10 @@ export default function TravelScreen() {
 
   <script>
     const map = L.map('map', {
-      center: [20, 0],
-      zoom: 2,
+      center: [20, 10],
+      zoom: 1.5,
+      minZoom: 1,
+      maxZoom: 18,
       zoomControl: true,
       attributionControl: false,
       touchZoom: true,
