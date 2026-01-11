@@ -12,7 +12,6 @@ import {
   ScrollView,
 } from 'react-native';
 import { Link, router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -58,12 +57,6 @@ export default function RegisterScreen() {
 
   return (
     <View style={styles.container}>
-      {/* 배경 그라데이션 */}
-      <LinearGradient
-        colors={['#0F172A', '#1E293B', '#334155']}
-        style={StyleSheet.absoluteFillObject}
-      />
-
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -76,124 +69,67 @@ export default function RegisterScreen() {
           <View style={styles.content}>
             {/* 로고 섹션 */}
             <View style={styles.logoContainer}>
-              <View style={styles.logoWrapper}>
-                <Ionicons name="cube-outline" size={64} color="#60A5FA" />
-              </View>
               <Text style={styles.appName}>SplatSpace</Text>
-              <Text style={styles.tagline}>나만의 가우시안 스플래팅 공간을 만드세요</Text>
             </View>
 
             {/* 회원가입 폼 */}
             <View style={styles.formContainer}>
-              <View style={styles.inputContainer}>
-                <Ionicons name="mail-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="이메일"
-                  placeholderTextColor="#64748B"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                />
-              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="이메일"
+                placeholderTextColor="#999999"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+              />
 
-              <View style={styles.inputContainer}>
-                <Ionicons name="person-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="사용자 이름"
-                  placeholderTextColor="#64748B"
-                  value={username}
-                  onChangeText={setUsername}
-                  autoCapitalize="none"
-                  autoComplete="username"
-                />
-              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="사용자 이름"
+                placeholderTextColor="#999999"
+                value={username}
+                onChangeText={setUsername}
+                autoCapitalize="none"
+                autoComplete="username"
+              />
 
-              <View style={styles.inputContainer}>
-                <Ionicons name="lock-closed-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="비밀번호 (최소 6자)"
-                  placeholderTextColor="#64748B"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  autoComplete="password"
-                />
-                <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                  style={styles.eyeIcon}
-                >
-                  <Ionicons
-                    name={showPassword ? 'eye-outline' : 'eye-off-outline'}
-                    size={20}
-                    color="#94A3B8"
-                  />
-                </TouchableOpacity>
-              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="비밀번호 (최소 6자)"
+                placeholderTextColor="#999999"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoComplete="password"
+              />
 
-              <View style={styles.inputContainer}>
-                <Ionicons name="lock-closed-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="비밀번호 확인"
-                  placeholderTextColor="#64748B"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry={!showConfirmPassword}
-                  autoComplete="password"
-                />
-                <TouchableOpacity
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                  style={styles.eyeIcon}
-                >
-                  <Ionicons
-                    name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'}
-                    size={20}
-                    color="#94A3B8"
-                  />
-                </TouchableOpacity>
-              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="비밀번호 확인"
+                placeholderTextColor="#999999"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={!showConfirmPassword}
+                autoComplete="password"
+              />
 
               <TouchableOpacity
                 style={[styles.registerButton, isLoading && styles.registerButtonDisabled]}
                 onPress={handleRegister}
                 disabled={isLoading}
               >
-                <LinearGradient
-                  colors={['#60A5FA', '#3B82F6', '#2563EB']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.registerButtonGradient}
-                >
-                  {isLoading ? (
-                    <ActivityIndicator color="#FFFFFF" />
-                  ) : (
-                    <View style={styles.registerButtonContent}>
-                      <Text style={styles.registerButtonText}>회원가입</Text>
-                      <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
-                    </View>
-                  )}
-                </LinearGradient>
+                {isLoading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.registerButtonText}>회원가입</Text>
+                )}
               </TouchableOpacity>
 
-              <View style={styles.divider}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>또는</Text>
-                <View style={styles.dividerLine} />
-              </View>
-
-              <TouchableOpacity style={styles.socialButton}>
-                <Ionicons name="logo-google" size={20} color="#FFFFFF" style={styles.socialIcon} />
-                <Text style={styles.socialButtonText}>Google로 계속하기</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.socialButton}>
-                <Ionicons name="logo-apple" size={20} color="#FFFFFF" style={styles.socialIcon} />
-                <Text style={styles.socialButtonText}>Apple로 계속하기</Text>
+              <TouchableOpacity style={styles.kakaoButton}>
+                <Ionicons name="chatbubble" size={20} color="#000000" style={styles.kakaoIcon} />
+                <Text style={styles.kakaoButtonText}>카카오 로그인</Text>
               </TouchableOpacity>
             </View>
 
@@ -216,7 +152,7 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
   },
   keyboardView: {
     flex: 1,
@@ -229,118 +165,66 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: 24,
+    maxWidth: 400,
+    width: '100%',
+    alignSelf: 'center',
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 40,
-  },
-  logoWrapper: {
-    width: 100,
-    height: 100,
-    borderRadius: 25,
-    backgroundColor: 'rgba(96, 165, 250, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-    borderWidth: 2,
-    borderColor: 'rgba(96, 165, 250, 0.2)',
+    marginBottom: 60,
   },
   appName: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
-    letterSpacing: 0.5,
-  },
-  tagline: {
-    fontSize: 13,
-    color: '#94A3B8',
-    textAlign: 'center',
-    letterSpacing: 0.3,
+    color: '#000000',
+    letterSpacing: 2,
   },
   formContainer: {
     marginBottom: 24,
   },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 16,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.1)',
-    paddingHorizontal: 16,
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
   input: {
-    flex: 1,
-    paddingVertical: 16,
-    fontSize: 16,
-    color: '#FFFFFF',
-  },
-  eyeIcon: {
-    padding: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 4,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    fontSize: 15,
+    color: '#000000',
+    marginBottom: 10,
+    backgroundColor: '#FFFFFF',
   },
   registerButton: {
-    borderRadius: 16,
-    overflow: 'hidden',
+    backgroundColor: '#000000',
+    borderRadius: 4,
+    paddingVertical: 16,
+    alignItems: 'center',
     marginTop: 10,
-    marginBottom: 24,
+    marginBottom: 12,
   },
   registerButtonDisabled: {
     opacity: 0.7,
   },
-  registerButtonGradient: {
-    paddingVertical: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  registerButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   registerButtonText: {
     color: '#FFFFFF',
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '600',
   },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: 'rgba(148, 163, 184, 0.2)',
-  },
-  dividerText: {
-    color: '#64748B',
-    paddingHorizontal: 16,
-    fontSize: 14,
-  },
-  socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 16,
+  kakaoButton: {
+    backgroundColor: '#FEE500',
+    borderRadius: 4,
     paddingVertical: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.2)',
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
-  socialIcon: {
-    marginRight: 12,
+  kakaoIcon: {
+    marginRight: 8,
   },
-  socialButtonText: {
-    color: '#FFFFFF',
+  kakaoButtonText: {
+    color: '#000000',
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   footer: {
     flexDirection: 'row',
@@ -349,12 +233,13 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   footerText: {
-    color: '#94A3B8',
+    color: '#666666',
     fontSize: 15,
   },
   footerLink: {
-    color: '#60A5FA',
+    color: '#000000',
     fontSize: 15,
     fontWeight: '600',
+    textDecorationLine: 'underline',
   },
 });
