@@ -3,14 +3,14 @@ import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
-import * as NativeSplashScreen from 'expo-splash-screen';
+import * as SplashScreen from 'expo-splash-screen';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
-import SplashScreen from '../components/SplashScreen';
+import CustomSplashScreen from '../components/SplashScreen';
 
-// 네이티브 스플래시 스크린을 빠르게 숨김
-NativeSplashScreen.hideAsync();
+// 네이티브 스플래시 자동 숨김 방지
+SplashScreen.preventAutoHideAsync();
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -22,6 +22,11 @@ function RootNavigator() {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
+    // 컴포넌트가 마운트되면 네이티브 스플래시를 즉시 숨김
+    SplashScreen.hideAsync();
+  }, []);
+
+  useEffect(() => {
     if (!isLoading && !showSplash) {
       if (!isAuthenticated) {
         router.replace('/(auth)/login');
@@ -30,7 +35,7 @@ function RootNavigator() {
   }, [isAuthenticated, isLoading, showSplash]);
 
   if (showSplash) {
-    return <SplashScreen onFinish={() => setShowSplash(false)} />;
+    return <CustomSplashScreen onFinish={() => setShowSplash(false)} />;
   }
 
   return (
