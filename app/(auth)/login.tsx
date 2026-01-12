@@ -1,19 +1,17 @@
+import { Ionicons } from '@expo/vector-icons';
+import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-  ActivityIndicator,
-  Image,
+  View
 } from 'react-native';
-import { Link, router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function LoginScreen() {
@@ -135,10 +133,10 @@ const styles = StyleSheet.create({
     marginBottom: 60,
   },
   appName: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 25,
     color: '#000000',
-    letterSpacing: 2,
+    letterSpacing: 3,
+    fontWeight: '300'
   },
   formContainer: {
     marginBottom: 24,

@@ -7,11 +7,11 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#60A5FA',
+        tabBarActiveTintColor: '#FFFFFF',
         tabBarInactiveTintColor: '#6B7280',
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#0F172A',
+          backgroundColor: '#000000',
           borderTopWidth: 0,
           paddingBottom: 20,
           paddingTop: 12,
@@ -54,24 +54,13 @@ export default function TabLayout() {
       <Tabs.Screen
         name="upload"
         options={{
-          title: '',
+          title: 'Upload',
           tabBarIcon: ({ color, focused }) => (
-            <View style={{
-              width: 56,
-              height: 56,
-              borderRadius: 28,
-              backgroundColor: focused ? '#60A5FA' : '#3B82F6',
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginBottom: 30,
-              shadowColor: '#60A5FA',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.3,
-              shadowRadius: 8,
-              elevation: 8,
-            }}>
-              <Ionicons name="add" size={32} color="#FFFFFF" />
-            </View>
+            <Ionicons
+              name={focused ? "add-circle" : "add-circle-outline"}
+              size={24}
+              color={color}
+            />
           ),
         }}
       />

@@ -187,11 +187,6 @@ export function FullScreenPostCard({ post, onLike, onComment, onViewDetails }: F
               </View>
             )}
           </TouchableOpacity>
-          {post.is3D && (
-            <View style={styles.badge3D}>
-              <Ionicons name="cube" size={16} color="#60A5FA" />
-            </View>
-          )}
         </View>
       </LinearGradient>
 

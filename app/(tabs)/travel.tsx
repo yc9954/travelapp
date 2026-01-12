@@ -1,31 +1,28 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  Modal,
-  TouchableOpacity,
-  Dimensions,
+    ActivityIndicator,
+    Dimensions,
+    Modal,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { Ionicons } from '@expo/vector-icons';
+import { travelAssets, type TravelAsset } from '../../services/mockData';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// Sample asset data (later fetch from API)
-const sampleAssets = [
-  { id: '1', name: 'Eiffel Tower', lat: 48.8584, lon: 2.2945, captureUrl: 'https://lumalabs.ai/capture/ca9ea966-ca24-4ec1-ab0f-af665cb546ff' },
-  { id: '2', name: 'Statue of Liberty', lat: 40.6892, lon: -74.0445, captureUrl: 'https://lumalabs.ai/capture/e5b6d44c-43e1-4d1e-b2d5-eca9d334b3fa' },
-  { id: '3', name: 'Seoul Tower', lat: 37.5512, lon: 126.9882, captureUrl: 'https://lumalabs.ai/capture/822bac8d-70c6-404e-aaae-f89f46672c67' },
-  { id: '4', name: 'Tokyo Tower', lat: 35.6586, lon: 139.7454, captureUrl: 'https://lumalabs.ai/capture/9d9e1e45-b089-4e4b-bb7d-ebc2d8cc7f57' },
-  { id: '5', name: 'Sydney Opera', lat: -33.8568, lon: 151.2153, captureUrl: 'https://lumalabs.ai/capture/9dfc3d2d-c6c4-40e6-b23c-c44f3f84af99' },
-];
+// Travel 에셋 데이터 사용
+const sampleAssets = travelAssets;
 
 export default function TravelScreen() {
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedAsset, setSelectedAsset] = useState<typeof sampleAssets[0] | null>(null);
+  const [selectedAsset, setSelectedAsset] = useState<TravelAsset | null>(null);
   const [showAssetModal, setShowAssetModal] = useState(false);
+  const [viewerLoading, setViewerLoading] = useState(true);
+  const [viewerError, setViewerError] = useState(false);
 
   const getMapHTML = () => {
     return `
@@ -35,45 +32,36 @@ export default function TravelScreen() {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Travel Map</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { overflow: hidden; background: #000; }
+    body { overflow: hidden; background: #F5F5F5; }
     #map { width: 100vw; height: 100vh; }
 
-    .custom-marker {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: #60A5FA;
-      border: 3px solid white;
-      box-shadow: 0 2px 8px rgba(96, 165, 250, 0.5);
-      cursor: pointer;
-      transition: all 0.2s;
+    .maplibregl-popup-content {
+      background: rgba(255, 255, 255, 0.98) !important;
+      color: #1F2937 !important;
+      border-radius: 12px !important;
+      padding: 0 !important;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important;
+      border: 1px solid rgba(0,0,0,0.1) !important;
     }
 
-    .custom-marker:hover {
-      transform: scale(1.2);
-      box-shadow: 0 4px 16px rgba(96, 165, 250, 0.8);
+    .maplibregl-popup-tip {
+      border-top-color: rgba(255, 255, 255, 0.98) !important;
     }
 
-    .leaflet-popup-content-wrapper {
-      background: rgba(15, 23, 42, 0.96);
-      color: white;
-      border-radius: 12px;
-      padding: 0;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-    }
-
-    .leaflet-popup-tip {
-      background: rgba(15, 23, 42, 0.96);
-    }
-
-    .leaflet-popup-close-button {
-      color: white !important;
+    .maplibregl-popup-close-button {
+      color: #6B7280 !important;
       font-size: 22px !important;
       padding: 4px 8px !important;
+      opacity: 0.7 !important;
+    }
+
+    .maplibregl-popup-close-button:hover {
+      opacity: 1 !important;
+      color: #1F2937 !important;
     }
 
     .asset-popup {
@@ -85,13 +73,13 @@ export default function TravelScreen() {
       margin: 0 0 10px 0;
       font-size: 18px;
       font-weight: 600;
-      color: #F3F4F6;
+      color: #1F2937;
     }
 
     .asset-popup .location {
       margin-bottom: 14px;
       font-size: 12px;
-      color: #94A3B8;
+      color: #6B7280;
     }
 
     .view-btn {
@@ -111,59 +99,141 @@ export default function TravelScreen() {
       background: #3B82F6;
       transform: scale(0.98);
     }
+
+    .maplibregl-ctrl-group {
+      background: rgba(255, 255, 255, 0.95) !important;
+      border-radius: 8px !important;
+      border: 1px solid rgba(0, 0, 0, 0.1) !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+    }
+
+    .maplibregl-ctrl button {
+      background-color: transparent !important;
+      color: #374151 !important;
+    }
+
+    .maplibregl-ctrl button:hover {
+      background-color: rgba(0, 0, 0, 0.05) !important;
+    }
   </style>
 </head>
 <body>
   <div id='map'></div>
 
   <script>
-    const map = L.map('map', {
-      center: [20, 10],
+    // MapLibre GL JS - API 키 불필요, 완전 무료 오픈소스
+    // Carto Positron 스타일 사용 (밝은 테마, 안정적)
+    const map = new maplibregl.Map({
+      container: 'map',
+      style: {
+        version: 8,
+        sources: {
+          'carto-tiles': {
+            type: 'raster',
+            tiles: [
+              'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+              'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+              'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+            ],
+            tileSize: 256,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          }
+        },
+        layers: [
+          {
+            id: 'carto-layer',
+            type: 'raster',
+            source: 'carto-tiles',
+            minzoom: 0,
+            maxzoom: 22
+          }
+        ],
+        glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf'
+      },
+      center: [10, 20],
       zoom: 1.5,
       minZoom: 1,
       maxZoom: 18,
-      zoomControl: true,
       attributionControl: false,
-      touchZoom: true,
-      scrollWheelZoom: true,
-      doubleClickZoom: true,
-      boxZoom: true
+      antialias: true,
+      preserveDrawingBuffer: true
     });
 
-    // OpenStreetMap Dark Theme (No token required, completely free)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-      subdomains: 'abcd',
-      maxZoom: 19
-    }).addTo(map);
+    map.on('load', () => {
+      const assets = ${JSON.stringify(sampleAssets)};
 
-    const assets = ${JSON.stringify(sampleAssets)};
+      assets.forEach(asset => {
+        // 커스텀 마커 엘리먼트 생성 (빨간색 원형 마커)
+        const el = document.createElement('div');
+        el.className = 'custom-marker';
+        el.style.width = '16px';
+        el.style.height = '16px';
+        el.style.borderRadius = '50%';
+        el.style.backgroundColor = '#EF4444';
+        el.style.border = '3px solid white';
+        el.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+        el.style.cursor = 'pointer';
+        el.style.transition = 'all 0.2s';
+        el.style.zIndex = '1000';
 
-    assets.forEach(asset => {
-      const icon = L.divIcon({
-        className: 'custom-div-icon',
-        html: '<div class="custom-marker"></div>',
-        iconSize: [40, 40],
-        iconAnchor: [20, 20]
-      });
+        el.addEventListener('mouseenter', () => {
+          el.style.transform = 'scale(1.3)';
+          el.style.boxShadow = '0 2px 8px rgba(239, 68, 68, 0.6)';
+        });
 
-      const marker = L.marker([asset.lat, asset.lon], { icon: icon })
-        .addTo(map);
+        el.addEventListener('mouseleave', () => {
+          el.style.transform = 'scale(1)';
+          el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+        });
 
-      const popupContent = \`
-        <div class="asset-popup">
+        // 마커 생성
+        const marker = new maplibregl.Marker(el)
+          .setLngLat([asset.lon, asset.lat])
+          .addTo(map);
+
+        // 팝업 생성
+        const popupContent = document.createElement('div');
+        popupContent.className = 'asset-popup';
+        popupContent.innerHTML = \`
           <h3>\${asset.name}</h3>
           <div class="location">\${asset.lat.toFixed(2)}°, \${asset.lon.toFixed(2)}°</div>
           <button class="view-btn" onclick="viewAsset('\${asset.id}', '\${asset.name}', '\${asset.captureUrl}')">
-            View in 3D
+            View
           </button>
-        </div>
-      \`;
+        \`;
 
-      marker.bindPopup(popupContent, {
-        maxWidth: 260,
-        className: 'custom-popup'
+        const popup = new maplibregl.Popup({
+          offset: 25,
+          closeButton: true,
+          closeOnClick: false,
+          maxWidth: '260px'
+        }).setDOMContent(popupContent);
+
+        marker.setPopup(popup);
       });
+
+      // 지도 로드 완료 메시지 전송
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'mapLoaded' }));
+      }
+    });
+
+    map.on('error', (e) => {
+      console.error('MapLibre error:', e);
+      // 에러가 발생해도 계속 시도하도록 설정
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ 
+          type: 'mapError', 
+          error: e.error?.message || 'Unknown error' 
+        }));
+      }
+    });
+
+    // 타일 로드 에러 처리
+    map.on('data', (e) => {
+      if (e.dataType === 'source' && e.isSourceLoaded === false) {
+        console.warn('Tile source load failed, retrying...');
+      }
     });
 
     function viewAsset(id, name, captureUrl) {
@@ -176,12 +246,6 @@ export default function TravelScreen() {
         }));
       }
     }
-
-    setTimeout(() => {
-      if (window.ReactNativeWebView) {
-        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'mapLoaded' }));
-      }
-    }, 500);
   </script>
 </body>
 </html>
@@ -194,12 +258,24 @@ export default function TravelScreen() {
 
       if (data.type === 'mapLoaded') {
         console.log('Map loaded successfully');
+        setIsLoading(false);
+      } else if (data.type === 'mapError') {
+        console.error('MapLibre error:', data.error);
+        setIsLoading(false);
       } else if (data.type === 'viewAsset') {
         const asset = sampleAssets.find(a => a.id === data.assetId);
         if (asset) {
           setSelectedAsset(asset);
           setShowAssetModal(true);
+          setViewerLoading(true);
+          setViewerError(false);
         }
+      } else if (data.type === 'viewerLoaded') {
+        setViewerLoading(false);
+        setViewerError(false);
+      } else if (data.type === 'viewerError') {
+        setViewerLoading(false);
+        setViewerError(true);
       }
     } catch (e) {
       console.log('[WebView] Message:', event.nativeEvent.data);
@@ -211,67 +287,125 @@ export default function TravelScreen() {
 <!DOCTYPE html>
 <html>
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
-    #canvas-container { width: 100%; height: 100%; }
-    canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+    body {
+      overflow: hidden;
+      background: #000;
+    }
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
   </style>
 </head>
 <body>
-  <div id="canvas-container"></div>
+  <canvas id="canvas"></canvas>
+
   <script type="importmap">
-    {
-      "imports": {
-        "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
-        "three/examples/jsm/controls/OrbitControls": "https://unpkg.com/three@0.157.0/examples/jsm/controls/OrbitControls.js",
-        "@lumaai/luma-web": "https://unpkg.com/@lumaai/luma-web@0.2.0/dist/library/luma-web.module.js"
-      }
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.157.0/examples/jsm/",
+      "@lumaai/luma-web": "https://unpkg.com/@lumaai/luma-web@0.2.0/dist/library/luma-web.module.js"
     }
+  }
   </script>
+
   <script type="module">
-    import * as THREE from 'three';
-    import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+    import {
+      WebGLRenderer,
+      PerspectiveCamera,
+      Scene,
+      Color
+    } from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     import { LumaSplatsThree } from '@lumaai/luma-web';
 
-    let scene = new THREE.Scene();
-    let camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.z = 2;
+    const canvas = document.getElementById('canvas');
 
-    let renderer = new THREE.WebGLRenderer({ antialias: false });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.getElementById('canvas-container').appendChild(renderer.domElement);
+    const renderer = new WebGLRenderer({
+      canvas: canvas,
+      antialias: false,
+      alpha: true
+    });
 
-    let controls = new OrbitControls(camera, renderer.domElement);
+    renderer.setSize(window.innerWidth, window.innerHeight, false);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    const scene = new Scene();
+    scene.background = new Color('black');
+
+    const camera = new PerspectiveCamera(
+      75,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000
+    );
+    camera.position.set(0, 0, 2);
+
+    const controls = new OrbitControls(camera, canvas);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
+    controls.enablePan = true;
+    controls.enableZoom = true;
     controls.autoRotate = true;
     controls.autoRotateSpeed = 1.0;
-    controls.enableZoom = true;
-    controls.zoomSpeed = 1.0;
     controls.minDistance = 0.5;
     controls.maxDistance = 10;
 
-    let splat = new LumaSplatsThree({
+    // Splat 로드
+    const splat = new LumaSplatsThree({
       source: '${captureUrl}',
       enableThreeShaderIntegration: false,
+      particleRevealEnabled: true,
     });
+
+    splat.onLoad = () => {
+      console.log('Splat loaded successfully');
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'viewerLoaded'
+        }));
+      }
+    };
+
+    splat.onError = (error) => {
+      console.error('Splat load error:', error);
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'viewerError',
+          error: error?.message || 'Failed to load 3D scene'
+        }));
+      }
+    };
+
     scene.add(splat);
 
+    // 애니메이션 루프
     function animate() {
       requestAnimationFrame(animate);
       controls.update();
       renderer.render(scene, camera);
     }
 
+    // 리사이즈 핸들러
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setSize(window.innerWidth, window.innerHeight, false);
     });
 
     animate();
+
+    // React Native로 준비 완료 메시지 전송
+    if (window.ReactNativeWebView) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        type: 'viewerReady'
+      }));
+    }
   </script>
 </body>
 </html>
@@ -324,14 +458,36 @@ export default function TravelScreen() {
 
           {/* 3D Viewer */}
           {selectedAsset && (
-            <WebView
-              source={{ html: get3DViewerHTML(selectedAsset.captureUrl) }}
-              style={styles.viewer3D}
-              scrollEnabled={false}
-              bounces={false}
-              scalesPageToFit={true}
-              javaScriptEnabled={true}
-            />
+            <View style={styles.viewer3D}>
+              <WebView
+                source={{ html: get3DViewerHTML(selectedAsset.captureUrl) }}
+                style={styles.viewer3D}
+                scrollEnabled={false}
+                bounces={false}
+                scalesPageToFit={true}
+                javaScriptEnabled={true}
+                onMessage={handleWebViewMessage}
+                onError={(syntheticEvent) => {
+                  const { nativeEvent } = syntheticEvent;
+                  console.error('3D Viewer WebView error:', nativeEvent);
+                  setViewerError(true);
+                  setViewerLoading(false);
+                }}
+              />
+              {viewerLoading && (
+                <View style={styles.viewerLoadingContainer}>
+                  <ActivityIndicator size="large" color="#60A5FA" />
+                  <Text style={styles.viewerLoadingText}>Loading 3D scene...</Text>
+                </View>
+              )}
+              {viewerError && (
+                <View style={styles.viewerErrorContainer}>
+                  <Ionicons name="alert-circle" size={48} color="#EF4444" />
+                  <Text style={styles.viewerErrorText}>Failed to load 3D scene</Text>
+                  <Text style={styles.viewerErrorSubtext}>Please try again later</Text>
+                </View>
+              )}
+            </View>
           )}
         </View>
       </Modal>
@@ -342,11 +498,11 @@ export default function TravelScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#F5F5F5',
   },
   webview: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#F5F5F5',
   },
   loadingContainer: {
     ...StyleSheet.absoluteFillObject,
@@ -388,5 +544,36 @@ const styles = StyleSheet.create({
   viewer3D: {
     flex: 1,
     backgroundColor: '#000000',
+  },
+  viewerLoadingContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    gap: 12,
+  },
+  viewerLoadingText: {
+    color: '#F3F4F6',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  viewerErrorContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    gap: 12,
+    padding: 20,
+  },
+  viewerErrorText: {
+    color: '#EF4444',
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  viewerErrorSubtext: {
+    color: '#94A3B8',
+    fontSize: 14,
+    textAlign: 'center',
   },
 });

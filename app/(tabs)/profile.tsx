@@ -64,11 +64,6 @@ export default function ProfileScreen() {
         source={{ uri: item.imageUrl }}
         style={styles.gridImage}
       />
-      {item.is3D && (
-        <View style={styles.gridBadge}>
-          <Text style={styles.gridBadgeText}>3D</Text>
-        </View>
-      )}
     </View>
   );
 
@@ -79,7 +74,7 @@ export default function ProfileScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Profile</Text>
         <TouchableOpacity onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={24} color="#F3F4F6" />
+          <Ionicons name="log-out-outline" size={24} color="#6B7280" />
         </TouchableOpacity>
       </View>
 
@@ -125,11 +120,11 @@ export default function ProfileScreen() {
         ListEmptyComponent={
           isLoading ? (
             <View style={styles.centerContainer}>
-              <ActivityIndicator size="large" color="#60A5FA" />
+              <ActivityIndicator size="large" color="#1F2937" />
             </View>
           ) : (
             <View style={styles.emptyContainer}>
-              <Ionicons name="images-outline" size={64} color="#6B7280" />
+              <Ionicons name="images-outline" size={64} color="#D1D5DB" />
               <Text style={styles.emptyText}>아직 게시물이 없습니다</Text>
               <TouchableOpacity
                 style={styles.uploadButton}
@@ -148,29 +143,29 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
   },
   header: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#FFFFFF',
     paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
+    paddingHorizontal: 20,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#E5E7EB',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#F3F4F6',
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1F2937',
+    letterSpacing: -0.5,
   },
   profileHeader: {
-    backgroundColor: '#1E293B',
-    padding: 24,
+    backgroundColor: '#FFFFFF',
+    padding: 32,
+    paddingBottom: 24,
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
   },
   profileImage: {
     width: 100,
@@ -178,76 +173,88 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     marginBottom: 16,
     borderWidth: 3,
-    borderColor: '#60A5FA',
+    borderColor: '#F3F4F6',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   username: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#F3F4F6',
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#1F2937',
     marginBottom: 8,
+    letterSpacing: -0.5,
   },
   bio: {
-    fontSize: 14,
-    color: '#94A3B8',
+    fontSize: 15,
+    color: '#6B7280',
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 24,
+    lineHeight: 22,
   },
   stats: {
     flexDirection: 'row',
-    gap: 32,
+    gap: 40,
     marginBottom: 24,
   },
   stat: {
     alignItems: 'center',
   },
   statNumber: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#F3F4F6',
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1F2937',
+    letterSpacing: -0.3,
   },
   statLabel: {
-    fontSize: 14,
-    color: '#94A3B8',
+    fontSize: 13,
+    color: '#6B7280',
     marginTop: 4,
+    fontWeight: '500',
   },
   editButton: {
-    backgroundColor: 'rgba(96, 165, 250, 0.1)',
+    backgroundColor: '#F9FAFB',
     paddingHorizontal: 32,
-    paddingVertical: 10,
-    borderRadius: 12,
-    marginBottom: 24,
+    paddingVertical: 12,
+    borderRadius: 10,
+    marginBottom: 32,
     borderWidth: 1,
-    borderColor: 'rgba(96, 165, 250, 0.3)',
+    borderColor: '#E5E7EB',
   },
   editButtonText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#60A5FA',
+    color: '#1F2937',
   },
   sectionHeader: {
     width: '100%',
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#334155',
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    borderTopWidth: 0.5,
+    borderTopColor: '#E5E7EB',
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#F3F4F6',
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+    letterSpacing: -0.3,
   },
   listContent: {
     flexGrow: 1,
+    backgroundColor: '#FFFFFF',
   },
   gridItem: {
     flex: 1 / 3,
     aspectRatio: 1,
-    padding: 1,
+    padding: 0.5,
     position: 'relative',
   },
   gridImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#F3F4F6',
   },
   gridBadge: {
     position: 'absolute',
@@ -268,24 +275,32 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 64,
+    backgroundColor: '#FFFFFF',
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 64,
+    backgroundColor: '#FFFFFF',
   },
   emptyText: {
     fontSize: 16,
-    color: '#94A3B8',
+    color: '#6B7280',
     marginTop: 16,
     marginBottom: 24,
+    fontWeight: '500',
   },
   uploadButton: {
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    backgroundColor: '#1F2937',
+    paddingHorizontal: 28,
+    paddingVertical: 14,
     borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   uploadButtonText: {
     color: '#FFFFFF',

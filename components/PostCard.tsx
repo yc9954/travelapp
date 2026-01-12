@@ -29,12 +29,6 @@ export function PostCard({ post, onLike, onComment, onViewPost }: PostCardProps)
             )}
           </View>
         </View>
-        {post.is3D && (
-          <View style={styles.badge3D}>
-            <Ionicons name="cube-outline" size={14} color="#FFFFFF" style={{ marginRight: 4 }} />
-            <Text style={styles.badge3DText}>3D</Text>
-          </View>
-        )}
       </View>
 
       <TouchableOpacity activeOpacity={0.9} onPress={() => onViewPost(post.id)}>

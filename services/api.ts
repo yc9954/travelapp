@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 import { StorageService } from './storage';
-import { mockPosts, mockUsers, createMockAuthResponse, delay } from './mockData';
+import { mockPosts, mockUsers, createMockAuthResponse, delay, convertTravelAssetsToPosts } from './mockData';
 import type {
   AuthResponse,
   LoginRequest,
@@ -75,7 +75,9 @@ class ApiService {
   async getFeed(page: number = 1, limit: number = 10): Promise<Post[]> {
     if (USE_MOCK_API) {
       await delay(500);
-      return this.mockPosts;
+      // Travel 에셋과 일반 포스트를 합쳐서 반환
+      const travelPosts = convertTravelAssetsToPosts();
+      return [...this.mockPosts, ...travelPosts];
     }
     const response = await this.client.get<Post[]>('/posts/feed', {
       params: { page, limit },

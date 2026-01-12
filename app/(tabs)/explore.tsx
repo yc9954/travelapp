@@ -59,11 +59,6 @@ export default function ExploreScreen() {
         style={styles.gridImage}
         resizeMode="cover"
       />
-      {item.is3D && (
-        <View style={styles.badge3D}>
-          <Ionicons name="cube" size={12} color="#FFFFFF" />
-        </View>
-      )}
       <View style={styles.overlay}>
         <View style={styles.overlayContent}>
           <Ionicons name="heart" size={16} color="#FFFFFF" />

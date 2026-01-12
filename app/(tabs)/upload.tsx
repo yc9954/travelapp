@@ -1,21 +1,20 @@
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  View,
+  Alert,
+  Dimensions,
+  FlatList,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  Image,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
-  Modal,
-  FlatList,
-  Dimensions,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as ImagePicker from 'expo-image-picker';
-import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { lumaGalleryAssets } from '../../services/mockData';
 
 const { width } = Dimensions.get('window');
@@ -135,7 +134,7 @@ export default function UploadScreen() {
           <View style={styles.optionsGrid}>
             <TouchableOpacity style={styles.optionCard} onPress={() => setShowLumaGallery(true)}>
               <View style={styles.optionIconContainer}>
-                <Ionicons name="cube-outline" size={48} color="#60A5FA" />
+                <Ionicons name="cube-outline" size={48} color="#1F2937" />
               </View>
               <Text style={styles.optionTitle}>Luma 갤러리</Text>
               <Text style={styles.optionDescription}>
@@ -145,7 +144,7 @@ export default function UploadScreen() {
 
             <TouchableOpacity style={styles.optionCard} onPress={takePhoto}>
               <View style={styles.optionIconContainer}>
-                <Ionicons name="camera" size={48} color="#34D399" />
+                <Ionicons name="camera" size={48} color="#1F2937" />
               </View>
               <Text style={styles.optionTitle}>촬영하기</Text>
               <Text style={styles.optionDescription}>
@@ -155,7 +154,7 @@ export default function UploadScreen() {
 
             <TouchableOpacity style={styles.optionCard} onPress={pickImage}>
               <View style={styles.optionIconContainer}>
-                <Ionicons name="images" size={48} color="#FBBF24" />
+                <Ionicons name="images" size={48} color="#1F2937" />
               </View>
               <Text style={styles.optionTitle}>갤러리</Text>
               <Text style={styles.optionDescription}>
@@ -171,7 +170,7 @@ export default function UploadScreen() {
 
           <View style={styles.featureCard}>
             <View style={styles.featureIcon}>
-              <Ionicons name="layers-outline" size={24} color="#60A5FA" />
+              <Ionicons name="layers-outline" size={24} color="#1F2937" />
             </View>
             <View style={styles.featureContent}>
               <Text style={styles.featureTitle}>배경 제거</Text>
@@ -183,7 +182,7 @@ export default function UploadScreen() {
 
           <View style={styles.featureCard}>
             <View style={styles.featureIcon}>
-              <Ionicons name="text-outline" size={24} color="#60A5FA" />
+              <Ionicons name="text-outline" size={24} color="#1F2937" />
             </View>
             <View style={styles.featureContent}>
               <Text style={styles.featureTitle}>텍스트 오버레이</Text>
@@ -195,7 +194,7 @@ export default function UploadScreen() {
 
           <View style={styles.featureCard}>
             <View style={styles.featureIcon}>
-              <Ionicons name="color-palette-outline" size={24} color="#60A5FA" />
+              <Ionicons name="color-palette-outline" size={24} color="#1F2937" />
             </View>
             <View style={styles.featureContent}>
               <Text style={styles.featureTitle}>커스텀 셰이더</Text>
@@ -218,7 +217,7 @@ export default function UploadScreen() {
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Luma 갤러리</Text>
             <TouchableOpacity onPress={() => setShowLumaGallery(false)}>
-              <Ionicons name="close" size={24} color="#F3F4F6" />
+              <Ionicons name="close" size={24} color="#6B7280" />
             </TouchableOpacity>
           </View>
 
@@ -262,89 +261,106 @@ export default function UploadScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
   },
   header: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#FFFFFF',
     paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
+    paddingHorizontal: 20,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#E5E7EB',
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#F3F4F6',
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1F2937',
+    letterSpacing: -0.5,
   },
   content: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
   },
   contentContainer: {
-    padding: 16,
+    padding: 20,
   },
   mainOptions: {
-    marginBottom: 32,
+    marginBottom: 40,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#F3F4F6',
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1F2937',
     marginBottom: 8,
+    letterSpacing: -0.5,
   },
   sectionDescription: {
-    fontSize: 14,
-    color: '#94A3B8',
-    marginBottom: 16,
+    fontSize: 15,
+    color: '#6B7280',
+    marginBottom: 24,
+    lineHeight: 22,
   },
   optionsGrid: {
     gap: 16,
   },
   optionCard: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 24,
+    padding: 28,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#334155',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   optionIconContainer: {
-    marginBottom: 12,
+    marginBottom: 16,
   },
   optionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#F3F4F6',
-    marginBottom: 4,
+    color: '#1F2937',
+    marginBottom: 6,
+    letterSpacing: -0.3,
   },
   optionDescription: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: '#6B7280',
     textAlign: 'center',
+    lineHeight: 20,
   },
   featuresSection: {
     marginBottom: 32,
   },
   featuresTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#F3F4F6',
-    marginBottom: 16,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 20,
+    letterSpacing: -0.3,
   },
   featureCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E293B',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 18,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 1,
   },
   featureIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(96, 165, 250, 0.1)',
+    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -355,43 +371,49 @@ const styles = StyleSheet.create({
   featureTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#F3F4F6',
-    marginBottom: 2,
+    color: '#1F2937',
+    marginBottom: 4,
+    letterSpacing: -0.2,
   },
   featureDescription: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: '#6B7280',
+    lineHeight: 20,
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
-    backgroundColor: '#1E293B',
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#F3F4F6',
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1F2937',
+    letterSpacing: -0.3,
   },
   modalContent: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
   },
   galleryDescription: {
-    fontSize: 14,
-    color: '#94A3B8',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    fontSize: 15,
+    color: '#6B7280',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    lineHeight: 22,
   },
   lumaGalleryGrid: {
     padding: 12,
+    backgroundColor: '#FFFFFF',
   },
   lumaAssetItem: {
     width: GRID_ITEM_SIZE,
@@ -403,7 +425,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 12,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#F3F4F6',
   },
   selectedOverlay: {
     position: 'absolute',
@@ -411,11 +433,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(96, 165, 250, 0.2)',
+    backgroundColor: 'rgba(96, 165, 250, 0.15)',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
+    borderWidth: 2.5,
     borderColor: '#60A5FA',
   },
   lumaBadge: {
@@ -433,31 +455,40 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   modalActions: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#334155',
-    backgroundColor: '#1E293B',
+    padding: 20,
+    borderTopWidth: 0.5,
+    borderTopColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
   },
   selectedInfo: {
-    marginBottom: 12,
+    marginBottom: 16,
   },
   selectedInfoTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
-    color: '#F3F4F6',
+    color: '#1F2937',
+    letterSpacing: -0.2,
   },
   selectedInfoSubtitle: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: '#6B7280',
+    marginTop: 2,
   },
   selectButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#1F2937',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   selectButtonDisabled: {
-    backgroundColor: '#475569',
+    backgroundColor: '#D1D5DB',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   selectButtonText: {
     color: '#FFFFFF',

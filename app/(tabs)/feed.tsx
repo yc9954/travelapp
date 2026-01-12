@@ -1,23 +1,23 @@
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  StyleSheet,
-  RefreshControl,
-  ActivityIndicator,
-  Text,
-  ScrollView,
-  Dimensions,
-  TouchableOpacity,
-  Image,
+    ActivityIndicator,
+    Dimensions,
+    Image,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { InteractiveSceneCard } from '../../components/InteractiveSceneCard';
 import { api } from '../../services/api';
 import type { Post } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const GRID_ITEM_WIDTH = (SCREEN_WIDTH - 48) / 2; // 2 columns with padding
+const GRID_ITEM_WIDTH = (SCREEN_WIDTH - 40) / 2; // 2 columns with padding (reduced padding for larger items)
 
 interface GridItemProps {
   item: Post;
@@ -37,12 +37,12 @@ function GridItem({ item, onPress }: GridItemProps) {
       <View style={styles.imageContainer}>
         {imageLoading && (
           <View style={styles.imageLoadingContainer}>
-            <ActivityIndicator size="small" color="#60A5FA" />
+            <ActivityIndicator size="small" color="#1F2937" />
           </View>
         )}
         {imageError ? (
           <View style={styles.imageErrorContainer}>
-            <Ionicons name="image-outline" size={40} color="#6B7280" />
+            <Ionicons name="image-outline" size={40} color="#D1D5DB" />
           </View>
         ) : (
           <Image
@@ -56,12 +56,6 @@ function GridItem({ item, onPress }: GridItemProps) {
               setImageError(true);
             }}
           />
-        )}
-        {item.is3D && (
-          <View style={styles.badge3D}>
-            <Ionicons name="cube-outline" size={12} color="#FFFFFF" />
-            <Text style={styles.badge3DText}>3D</Text>
-          </View>
         )}
         <View style={styles.statsOverlay}>
           <View style={styles.statItem}>
@@ -111,7 +105,7 @@ export default function FeedScreen() {
   if (isLoading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#60A5FA" />
+        <ActivityIndicator size="large" color="#1F2937" />
       </View>
     );
   }
@@ -126,7 +120,7 @@ export default function FeedScreen() {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
-            tintColor="#60A5FA"
+            tintColor="#1F2937"
           />
         }
         showsVerticalScrollIndicator={false}
@@ -156,46 +150,54 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#FFFFFF',
   },
   scrollView: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000000',
+    backgroundColor: '#FFFFFF',
   },
   featuredSection: {
-    backgroundColor: '#000000',
-    paddingTop: 24,
+    backgroundColor: '#FFFFFF',
+    paddingTop: 0,
     paddingBottom: 100,
   },
   sectionTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontWeight: '700',
+    color: '#1F2937',
     marginBottom: 16,
-    paddingHorizontal: 16,
+    marginTop: 20,
+    paddingHorizontal: 20,
+    letterSpacing: -0.5,
   },
   grid: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
+    gap: 12,
   },
   gridItem: {
     width: GRID_ITEM_WIDTH,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   imageContainer: {
     width: '100%',
     aspectRatio: 3 / 4,
-    borderRadius: 12,
+    borderRadius: 14,
     overflow: 'hidden',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#F3F4F6',
     position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   image: {
     width: '100%',
@@ -209,7 +211,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#F3F4F6',
   },
   imageErrorContainer: {
     position: 'absolute',
@@ -219,7 +221,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#F3F4F6',
   },
   badge3D: {
     position: 'absolute',
@@ -249,10 +251,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 10,
+    backdropFilter: 'blur(10px)',
   },
   statText: {
     color: '#FFFFFF',
