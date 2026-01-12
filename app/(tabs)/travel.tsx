@@ -1,13 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Dimensions,
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  Modal,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { travelAssets, type TravelAsset } from '../../services/mockData';
@@ -23,6 +24,8 @@ export default function TravelScreen() {
   const [showAssetModal, setShowAssetModal] = useState(false);
   const [viewerLoading, setViewerLoading] = useState(true);
   const [viewerError, setViewerError] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const webViewRef = useRef<WebView>(null);
 
   const getMapHTML = () => {
     return `
@@ -159,6 +162,9 @@ export default function TravelScreen() {
       preserveDrawingBuffer: true
     });
 
+    // 지도 객체를 전역 변수로 저장
+    window.mapInstance = map;
+
     map.on('load', () => {
       const assets = ${JSON.stringify(sampleAssets)};
 
@@ -256,7 +262,7 @@ export default function TravelScreen() {
     try {
       const data = JSON.parse(event.nativeEvent.data);
 
-      if (data.type === 'mapLoaded') {
+      if (data.type === 'mapLoaded' || data.type === 'mapReady') {
         console.log('Map loaded successfully');
         setIsLoading(false);
       } else if (data.type === 'mapError') {
@@ -400,10 +406,72 @@ export default function TravelScreen() {
 
     animate();
 
+    // 지도 제어 함수들을 전역으로 노출
+    window.searchLocation = function(query) {
+      const searchQuery = encodeURIComponent(query);
+      fetch(\`https://nominatim.openstreetmap.org/search?q=\${searchQuery}&format=json&limit=1\`)
+        .then(response => response.json())
+        .then(results => {
+          if (results && results.length > 0) {
+            const result = results[0];
+            const lat = parseFloat(result.lat);
+            const lon = parseFloat(result.lon);
+            map.flyTo({
+              center: [lon, lat],
+              zoom: 12,
+              duration: 1000
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Geocoding error:', error);
+        });
+    };
+
+    window.centerMap = function() {
+      map.flyTo({
+        center: [10, 20],
+        zoom: 1.5,
+        duration: 1000
+      });
+    };
+
+    window.getCurrentLocation = function() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            map.flyTo({
+              center: [lon, lat],
+              zoom: 12,
+              duration: 1000
+            });
+          },
+          (error) => {
+            console.error('Geolocation error:', error);
+            // 에러 시 기본 위치로 이동
+            map.flyTo({
+              center: [10, 20],
+              zoom: 1.5,
+              duration: 1000
+            });
+          }
+        );
+      } else {
+        // Geolocation이 지원되지 않으면 기본 위치로 이동
+        map.flyTo({
+          center: [10, 20],
+          zoom: 1.5,
+          duration: 1000
+        });
+      }
+    };
+
     // React Native로 준비 완료 메시지 전송
     if (window.ReactNativeWebView) {
       window.ReactNativeWebView.postMessage(JSON.stringify({
-        type: 'viewerReady'
+        type: 'mapReady'
       }));
     }
   </script>
@@ -412,9 +480,62 @@ export default function TravelScreen() {
     `;
   };
 
+  const handleCenterMap = () => {
+    // 현재 위치로 이동
+    if (webViewRef.current) {
+      webViewRef.current.injectJavaScript(`
+        if (window.getCurrentLocation) {
+          window.getCurrentLocation();
+        }
+        true;
+      `);
+    }
+  };
+
+  const handleSearch = () => {
+    if (!searchQuery.trim()) return;
+    
+    // WebView에 검색 실행
+    if (webViewRef.current) {
+      const query = searchQuery.trim();
+      webViewRef.current.injectJavaScript(`
+        if (window.searchLocation) {
+          window.searchLocation('${query.replace(/'/g, "\\'")}');
+        }
+        true;
+      `);
+    }
+  };
+
   return (
     <View style={styles.container}>
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={20} color="#6B7280" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search locations..."
+            placeholderTextColor="#9CA3AF"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onSubmitEditing={handleSearch}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              onPress={() => setSearchQuery('')}
+              style={styles.clearButton}
+            >
+              <Ionicons name="close-circle" size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+
       <WebView
+        ref={webViewRef}
         source={{ html: getMapHTML() }}
         style={styles.webview}
         onLoadStart={() => setIsLoading(true)}
@@ -436,6 +557,11 @@ export default function TravelScreen() {
           <Text style={styles.loadingText}>Loading map...</Text>
         </View>
       )}
+
+      {/* Current Location Button */}
+      <TouchableOpacity style={styles.locationButton} onPress={handleCenterMap}>
+        <Ionicons name="locate" size={24} color="#1F2937" />
+      </TouchableOpacity>
 
       {/* Asset 3D Viewer Modal */}
       <Modal
@@ -499,6 +625,60 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
+  },
+  searchContainer: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    right: 20,
+    zIndex: 1000,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 0.5,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  searchIcon: {
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#1F2937',
+    padding: 0,
+  },
+  clearButton: {
+    marginLeft: 8,
+    padding: 4,
+  },
+  locationButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 0.5,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    zIndex: 1001,
   },
   webview: {
     flex: 1,

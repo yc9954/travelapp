@@ -33,7 +33,7 @@ export default function LoginScreen() {
       router.replace('/(tabs)/feed');
     } catch (error: any) {
       Alert.alert(
-        '로그인 실패',
+        '로그인 실패하였습니다.',
         error.response?.data?.message || '이메일 또는 비밀번호가 올바르지 않습니다.'
       );
     } finally {

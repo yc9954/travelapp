@@ -28,7 +28,7 @@ export default function UploadScreen() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (status !== 'granted') {
-      Alert.alert('권한 필요', '사진을 선택하려면 갤러리 접근 권한이 필요합니다.');
+      Alert.alert('Permission Required', 'Gallery access is required to select photos.');
       return;
     }
 
@@ -54,7 +54,7 @@ export default function UploadScreen() {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
 
     if (status !== 'granted') {
-      Alert.alert('권한 필요', '사진을 촬영하려면 카메라 접근 권한이 필요합니다.');
+      Alert.alert('Permission Required', 'Camera access is required to take photos.');
       return;
     }
 
@@ -81,7 +81,7 @@ export default function UploadScreen() {
 
   const handleUseLumaAsset = () => {
     if (!selectedLumaAsset) {
-      Alert.alert('알림', 'Luma 에셋을 선택해주세요.');
+      Alert.alert('Notice', 'Please select a Luma asset.');
       return;
     }
 
@@ -126,56 +126,42 @@ export default function UploadScreen() {
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {/* 메인 업로드 옵션 */}
         <View style={styles.mainOptions}>
-          <Text style={styles.sectionTitle}>에셋 선택</Text>
-          <Text style={styles.sectionDescription}>
-            가우시안 스플래팅 에셋을 선택하거나 새로 촬영하세요
-          </Text>
-
           <View style={styles.optionsGrid}>
             <TouchableOpacity style={styles.optionCard} onPress={() => setShowLumaGallery(true)}>
               <View style={styles.optionIconContainer}>
-                <Ionicons name="cube-outline" size={48} color="#1F2937" />
+                <Ionicons name="cube-outline" size={32} color="#1F2937" />
               </View>
-              <Text style={styles.optionTitle}>Luma 갤러리</Text>
-              <Text style={styles.optionDescription}>
-                실제 가우시안 스플래팅 에셋 선택
-              </Text>
+              <Text style={styles.optionTitle}>Luma</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.optionCard} onPress={takePhoto}>
               <View style={styles.optionIconContainer}>
-                <Ionicons name="camera" size={48} color="#1F2937" />
+                <Ionicons name="camera" size={32} color="#1F2937" />
               </View>
-              <Text style={styles.optionTitle}>촬영하기</Text>
-              <Text style={styles.optionDescription}>
-                카메라로 새로운 사진 촬영
-              </Text>
+              <Text style={styles.optionTitle}>Camera</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.optionCard} onPress={pickImage}>
               <View style={styles.optionIconContainer}>
-                <Ionicons name="images" size={48} color="#1F2937" />
+                <Ionicons name="images" size={32} color="#1F2937" />
               </View>
-              <Text style={styles.optionTitle}>갤러리</Text>
-              <Text style={styles.optionDescription}>
-                기기의 사진 선택
-              </Text>
+              <Text style={styles.optionTitle}>Gallery</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Luma 기능 소개 */}
         <View style={styles.featuresSection}>
-          <Text style={styles.featuresTitle}>Luma 편집 기능</Text>
+          <Text style={styles.featuresTitle}>Edit Features</Text>
 
           <View style={styles.featureCard}>
             <View style={styles.featureIcon}>
               <Ionicons name="layers-outline" size={24} color="#1F2937" />
             </View>
             <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>배경 제거</Text>
+              <Text style={styles.featureTitle}>Remove Background</Text>
               <Text style={styles.featureDescription}>
-                시맨틱 레이어 필터링으로 배경 분리
+                Separate background with semantic layer filtering
               </Text>
             </View>
           </View>
@@ -185,9 +171,9 @@ export default function UploadScreen() {
               <Ionicons name="text-outline" size={24} color="#1F2937" />
             </View>
             <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>텍스트 오버레이</Text>
+              <Text style={styles.featureTitle}>Text Overlay</Text>
               <Text style={styles.featureDescription}>
-                이미지에 커스텀 텍스트 추가
+                Add custom text to image
               </Text>
             </View>
           </View>
@@ -197,9 +183,9 @@ export default function UploadScreen() {
               <Ionicons name="color-palette-outline" size={24} color="#1F2937" />
             </View>
             <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>커스텀 셰이더</Text>
+              <Text style={styles.featureTitle}>Custom Shader</Text>
               <Text style={styles.featureDescription}>
-                GLSL 셰이더로 고급 효과 적용
+                Apply advanced effects with GLSL shaders
               </Text>
             </View>
           </View>
@@ -215,7 +201,7 @@ export default function UploadScreen() {
       >
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Luma 갤러리</Text>
+            <Text style={styles.modalTitle}>Luma Gallery</Text>
             <TouchableOpacity onPress={() => setShowLumaGallery(false)}>
               <Ionicons name="close" size={24} color="#6B7280" />
             </TouchableOpacity>
@@ -223,7 +209,7 @@ export default function UploadScreen() {
 
           <View style={styles.modalContent}>
             <Text style={styles.galleryDescription}>
-              실제 Luma Gaussian Splatting 에셋을 선택하세요
+              Select a real Luma Gaussian Splatting asset
             </Text>
 
             <FlatList
@@ -247,7 +233,7 @@ export default function UploadScreen() {
                 disabled={!selectedLumaAsset}
               >
                 <Text style={styles.selectButtonText}>
-                  {selectedLumaAsset ? '선택 완료' : '에셋을 선택하세요'}
+                  {selectedLumaAsset ? 'Done' : 'Select an asset'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -284,52 +270,33 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   mainOptions: {
-    marginBottom: 40,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 8,
-    letterSpacing: -0.5,
-  },
-  sectionDescription: {
-    fontSize: 15,
-    color: '#6B7280',
-    marginBottom: 24,
-    lineHeight: 22,
+    marginBottom: 32,
   },
   optionsGrid: {
-    gap: 16,
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'space-between',
   },
   optionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 28,
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 24,
     alignItems: 'center',
-    borderWidth: 1,
+    justifyContent: 'center',
+    borderWidth: 0.5,
     borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    minHeight: 120,
   },
   optionIconContainer: {
-    marginBottom: 16,
+    marginBottom: 10,
   },
   optionTitle: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '600',
     color: '#1F2937',
-    marginBottom: 6,
-    letterSpacing: -0.3,
-  },
-  optionDescription: {
-    fontSize: 14,
-    color: '#6B7280',
+    letterSpacing: -0.2,
     textAlign: 'center',
-    lineHeight: 20,
   },
   featuresSection: {
     marginBottom: 32,
