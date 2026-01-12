@@ -88,9 +88,9 @@ export default function LoginScreen() {
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.kakaoButton}>
-              <Ionicons name="chatbubble" size={20} color="#000000" style={styles.kakaoIcon} />
-              <Text style={styles.kakaoButtonText}>카카오 로그인</Text>
+            <TouchableOpacity style={styles.googleButton}>
+              <Ionicons name="logo-google" size={20} color="#4285F4" style={styles.googleIcon} />
+              <Text style={styles.googleButtonText}>구글 로그인</Text>
             </TouchableOpacity>
           </View>
 
@@ -168,21 +168,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  kakaoButton: {
-    backgroundColor: '#FEE500',
+  googleButton: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#DADCE0',
     borderRadius: 4,
     paddingVertical: 16,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
   },
-  kakaoIcon: {
+  googleIcon: {
     marginRight: 8,
   },
-  kakaoButtonText: {
-    color: '#000000',
+  googleButtonText: {
+    color: '#3C4043',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   footer: {
     flexDirection: 'row',
