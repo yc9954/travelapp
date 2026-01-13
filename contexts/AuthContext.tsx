@@ -142,10 +142,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (data: LoginRequest) => {
     try {
+      console.log('🔑 Logging in with email...');
+      // 로그인 전에 기존 세션 클리어 (충돌 방지)
+      await supabase.auth.signOut({ scope: 'local' });
+
       const response = await api.login(data);
       await StorageService.saveAuthToken(response.token);
       await StorageService.saveUserData(response.user);
       setUser(response.user);
+      console.log('✅ Login successful');
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -166,11 +171,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      await supabase.auth.signOut();
+      console.log('🚪 Logging out...');
+      // Supabase 세션 완전히 제거 (모든 탭/창에서)
+      await supabase.auth.signOut({ scope: 'local' });
+      // 로컬 스토리지 클리어
       await StorageService.clearAll();
+      // 상태 초기화
       setUser(null);
+      console.log('✅ Logout complete');
     } catch (error) {
       console.error('Logout error:', error);
+      // 에러가 나도 로컬 상태는 클리어
+      await StorageService.clearAll();
+      setUser(null);
     }
   };
 

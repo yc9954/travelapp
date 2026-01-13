@@ -75,6 +75,10 @@ export default function LoginScreen() {
         return;
       }
 
+      console.log('🔑 Logging in with Google...');
+      // 로그인 전에 기존 세션 클리어 (충돌 방지)
+      await supabase.auth.signOut({ scope: 'local' });
+
       // Supabase OAuth URL 생성
       const redirectUrl = AuthSession.makeRedirectUri({
         scheme: 'splatspace',
