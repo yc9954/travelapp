@@ -32,6 +32,8 @@ export default function LoginScreen() {
   useEffect(() => {
     if (isAuthenticated && !authLoading) {
       console.log('User is authenticated, navigating to feed');
+      setIsGoogleLoading(false);
+      setIsLoading(false);
       router.replace('/(tabs)/feed');
     }
   }, [isAuthenticated, authLoading]);
@@ -107,10 +109,18 @@ export default function LoginScreen() {
 
         console.log('OAuth result:', result.type);
 
-        // URL에서 토큰 파싱하고 세션 설정
-        if ((result.type === 'success' || result.type === 'dismiss') && result.url) {
+        // 사용자가 취소한 경우
+        if (result.type === 'cancel') {
+          console.log('User cancelled the login flow');
+          setIsGoogleLoading(false);
+          return;
+        }
+
+        // 성공적으로 리디렉션된 경우
+        if (result.type === 'success' && result.url) {
           try {
             console.log('Parsing URL for tokens');
+            console.log('Result URL:', result.url);
 
             // URL에서 토큰 추출
             let accessToken: string | null = null;
@@ -142,11 +152,11 @@ export default function LoginScreen() {
 
             console.log('Tokens found:', { hasAccessToken: !!accessToken, hasRefreshToken: !!refreshToken });
 
-            if (accessToken) {
+            if (accessToken && refreshToken) {
               // Supabase 세션 설정 - AuthContext의 onAuthStateChange가 자동으로 사용자 정보를 업데이트함
               const { error: sessionError } = await supabase.auth.setSession({
                 access_token: accessToken,
-                refresh_token: refreshToken || '',
+                refresh_token: refreshToken,
               });
 
               if (sessionError) {
@@ -159,9 +169,10 @@ export default function LoginScreen() {
               // AuthContext가 onAuthStateChange를 통해 사용자 정보를 업데이트함
               // useEffect에서 isAuthenticated가 true가 되면 자동으로 feed로 이동
               console.log('Google login success, waiting for auth context update...');
+              // 로딩 상태는 AuthContext 업데이트 후 자동으로 해제됨
             } else {
-              console.error('No access token found in URL');
-              Alert.alert('로그인 실패', '인증 토큰을 찾을 수 없습니다.');
+              console.error('No tokens found in URL');
+              Alert.alert('로그인 실패', '인증 토큰을 찾을 수 없습니다. Supabase Redirect URL 설정을 확인해주세요.');
               setIsGoogleLoading(false);
             }
           } catch (urlError: any) {
@@ -169,11 +180,9 @@ export default function LoginScreen() {
             Alert.alert('로그인 실패', 'URL 파싱 중 오류가 발생했습니다.');
             setIsGoogleLoading(false);
           }
-        } else if (result.type === 'cancel') {
-          console.log('User cancelled the login flow');
-          setIsGoogleLoading(false);
         } else {
-          console.log('OAuth flow did not complete');
+          // dismiss 또는 기타 타입
+          console.log('OAuth flow did not complete successfully. Type:', result.type);
           setIsGoogleLoading(false);
         }
       } else {
