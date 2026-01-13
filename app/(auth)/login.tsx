@@ -105,10 +105,45 @@ export default function LoginScreen() {
             if (sessionError) {
               console.error('Session error:', sessionError);
               Alert.alert('로그인 실패', '세션 설정에 실패했습니다.');
-            } else {
-              console.log('Login success');
-              router.replace('/(tabs)/feed');
+              return;
             }
+
+            // Supabase에서 사용자 정보 가져오기
+            const { data: { user: supabaseUser }, error: userError } = await supabase.auth.getUser();
+
+            if (userError || !supabaseUser) {
+              console.error('Get user error:', userError);
+              Alert.alert('로그인 실패', '사용자 정보를 가져오는데 실패했습니다.');
+              return;
+            }
+
+            // Supabase 사용자 정보를 AuthContext 형식에 맞게 변환
+            const userData = {
+              id: supabaseUser.id,
+              email: supabaseUser.email || '',
+              username: supabaseUser.user_metadata?.username || supabaseUser.email?.split('@')[0] || 'user',
+              profileImage: supabaseUser.user_metadata?.avatar_url || supabaseUser.user_metadata?.picture,
+              bio: supabaseUser.user_metadata?.bio || '',
+              followersCount: 0,
+              followingCount: 0,
+              postsCount: 0,
+              createdAt: supabaseUser.created_at || new Date().toISOString(),
+            };
+
+            // AuthContext에 사용자 정보 저장
+            const { StorageService } = await import('../../services/storage');
+            await StorageService.saveAuthToken(accessToken);
+            await StorageService.saveUserData(userData);
+
+            // AuthContext 업데이트를 위해 login 함수 호출 (하지만 실제로는 이미 저장했으므로 직접 업데이트)
+            // AuthContext의 user 상태를 업데이트하기 위해 login 함수를 사용하거나
+            // 직접 setUser를 호출할 수 없으므로, StorageService에 저장한 후
+            // AuthContext가 자동으로 감지하도록 하거나, router.replace로 이동하면
+            // AuthContext의 checkAuth가 다시 실행될 것입니다.
+
+            console.log('Google login success');
+            // 홈 화면(첫 번째 탭)으로 이동
+            router.replace('/(tabs)/feed');
           }
         } else if (result.type === 'cancel') {
           console.log('User cancelled the login flow');
