@@ -277,7 +277,7 @@ export default function TravelScreen() {
         });
     };
 
-    // 현재 위치로 이동
+    // Move to current location
     window.getCurrentLocation = function() {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
@@ -485,7 +485,7 @@ export default function TravelScreen() {
   };
 
   const handleCenterMap = () => {
-    // 현재 위치로 이동
+    // Move to current location
     if (webViewRef.current) {
       webViewRef.current.injectJavaScript(`
         if (window.getCurrentLocation) {

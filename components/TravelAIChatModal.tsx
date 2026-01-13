@@ -165,11 +165,22 @@ export function TravelAIChatModal({ visible, onClose }: TravelAIChatModalProps) 
                 {messages.map((message, index) => (
                   <View
                     key={index}
-                    style={styles.messageRow}
+                    style={[
+                      styles.messageRow,
+                      message.role === 'user' && styles.userMessageRow,
+                    ]}
                   >
                     {message.role === 'assistant' && (
                       <View style={styles.messageAvatar}>
                         <Ionicons name="sparkles" size={20} color="#60A5FA" />
+                      </View>
+                    )}
+                    {message.role === 'user' && (
+                      <View style={styles.userAvatar}>
+                        <Image
+                          source={{ uri: userProfileImage }}
+                          style={styles.userAvatarImage}
+                        />
                       </View>
                     )}
                     <View
@@ -187,14 +198,6 @@ export function TravelAIChatModal({ visible, onClose }: TravelAIChatModalProps) 
                         {message.content}
                       </Text>
                     </View>
-                    {message.role === 'user' && (
-                      <View style={styles.userAvatar}>
-                        <Image
-                          source={{ uri: userProfileImage }}
-                          style={styles.userAvatarImage}
-                        />
-                      </View>
-                    )}
                   </View>
                 ))}
                 {isLoading && (
@@ -352,6 +355,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: 16,
     alignItems: 'flex-start',
+  },
+  userMessageRow: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'flex-start',
   },
   messageAvatar: {
     width: 32,
