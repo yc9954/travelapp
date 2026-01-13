@@ -66,61 +66,75 @@ ALTER TABLE likes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
 
 -- Profiles policies
+DROP POLICY IF EXISTS "Profiles are viewable by everyone" ON profiles;
 CREATE POLICY "Profiles are viewable by everyone"
   ON profiles FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
 CREATE POLICY "Users can update own profile"
   ON profiles FOR UPDATE
   USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
 CREATE POLICY "Users can insert own profile"
   ON profiles FOR INSERT
   WITH CHECK (auth.uid() = id);
 
 -- Posts policies
+DROP POLICY IF EXISTS "Posts are viewable by everyone" ON posts;
 CREATE POLICY "Posts are viewable by everyone"
   ON posts FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Users can insert own posts" ON posts;
 CREATE POLICY "Users can insert own posts"
   ON posts FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update own posts" ON posts;
 CREATE POLICY "Users can update own posts"
   ON posts FOR UPDATE
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete own posts" ON posts;
 CREATE POLICY "Users can delete own posts"
   ON posts FOR DELETE
   USING (auth.uid() = user_id);
 
 -- Likes policies
+DROP POLICY IF EXISTS "Likes are viewable by everyone" ON likes;
 CREATE POLICY "Likes are viewable by everyone"
   ON likes FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Users can insert own likes" ON likes;
 CREATE POLICY "Users can insert own likes"
   ON likes FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete own likes" ON likes;
 CREATE POLICY "Users can delete own likes"
   ON likes FOR DELETE
   USING (auth.uid() = user_id);
 
 -- Comments policies
+DROP POLICY IF EXISTS "Comments are viewable by everyone" ON comments;
 CREATE POLICY "Comments are viewable by everyone"
   ON comments FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Users can insert own comments" ON comments;
 CREATE POLICY "Users can insert own comments"
   ON comments FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update own comments" ON comments;
 CREATE POLICY "Users can update own comments"
   ON comments FOR UPDATE
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete own comments" ON comments;
 CREATE POLICY "Users can delete own comments"
   ON comments FOR DELETE
   USING (auth.uid() = user_id);

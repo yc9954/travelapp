@@ -342,6 +342,102 @@ VALUES
     'Hidden Spot',
     ARRAY['자연', '탐험', '발견', '비경'],
     NOW() - INTERVAL '14 hours'
+  ),
+  -- Post 15 (from mockData) - 스위스 알프스
+  (
+    '550e8400-e29b-41d4-a716-446655440025',
+    '550e8400-e29b-41d4-a716-446655440002',
+    'https://cdn-luma.com/05c3390b981e9642505f719e1e873a4a9e7f277c6882dbad1dad17e285563f2a/Highcliffe_Castle_Video_thumb.jpg',
+    'https://lumalabs.ai/capture/4da7cf32-865a-4515-8cb9-9dfc574c90c2',
+    true,
+    '스위스 알프스의 아름다운 설경! 360도 파노라마로 즐겨보세요 🏔️✨',
+    'Arosa, 스위스',
+    ARRAY['스위스', '알프스', '가우시안스플래팅', '3D'],
+    NOW() - INTERVAL '15 hours'
+  ),
+  -- Post 16 (from mockData) - 성운 가우시안 스플래팅
+  (
+    '550e8400-e29b-41d4-a716-446655440026',
+    '550e8400-e29b-41d4-a716-446655440003',
+    'https://cdn-luma.com/76c1aafa17eb1377ff6cc9b8a246d58181a316bb0e33592dd1f657aaa0448ecd/Nebula_Gaussian_Splatting_thumb.jpg',
+    'https://lumalabs.ai/capture/b86b7928-f130-40a5-8cac-8095f30eed54',
+    true,
+    '성운 가우시안 스플래팅 💙 환상적인 우주 공간을 3D로!',
+    'Digital Space',
+    ARRAY['디지털아트', '성운', '우주', '가우시안스플래팅'],
+    NOW() - INTERVAL '16 hours'
+  ),
+  -- Post 17 (from mockData) - 지구본 아트 오브제
+  (
+    '550e8400-e29b-41d4-a716-446655440027',
+    '550e8400-e29b-41d4-a716-446655440002',
+    'https://cdn-luma.com/dae39f9834ce5ff37efd798c27669caad8f67969a188f74a2e387607773b3fa9/MIT_WPU_Globe_thumb.jpg',
+    'https://lumalabs.ai/capture/ca9ea966-ca24-4ec1-ab0f-af665cb546ff',
+    true,
+    '지구본 아트 오브제! 디테일이 정말 놀라워요 🌍✨',
+    'MIT Campus',
+    ARRAY['아트', '오브제', '3D스캔', '가우시안스플래팅'],
+    NOW() - INTERVAL '17 hours'
+  ),
+  -- Post 18 (from mockData) - 민들레 홀씨
+  (
+    '550e8400-e29b-41d4-a716-446655440028',
+    '550e8400-e29b-41d4-a716-446655440003',
+    'https://cdn-luma.com/998f66a10b35ecdc8ff532714eccd37ef567ba190b6b9a45833975e5b48fdf05/Dandelion_thumb.jpg',
+    'https://lumalabs.ai/capture/d80d4876-cf71-4b8a-8b5b-49ffac44cd4a',
+    true,
+    '민들레 홀씨의 섬세한 아름다움 🌼 매크로 3D 촬영',
+    '정원',
+    ARRAY['자연', '매크로', '민들레', '3D촬영'],
+    NOW() - INTERVAL '18 hours'
+  ),
+  -- Post 19 (from mockData) - 고전 조각 작품
+  (
+    '550e8400-e29b-41d4-a716-446655440029',
+    '550e8400-e29b-41d4-a716-446655440002',
+    'https://cdn-luma.com/77b06b20dd103ee39f6c8fb54768068ce4f043c8f1cc238d563abe7e5c7a4a84/Jules_Desbois_La_Femme_l_thumb.jpg',
+    'https://lumalabs.ai/capture/1b5f3e33-3900-4398-8795-b585ae13fd2d',
+    true,
+    '고전 조각 작품의 섬세한 표현 🗿 박물관 소장품을 3D로',
+    '미술관',
+    ARRAY['조각', '예술', '박물관', '3D아카이빙'],
+    NOW() - INTERVAL '19 hours'
+  ),
+  -- Post 20 (from mockData) - 성운 가우시안 스플래팅 (다른 각도/버전)
+  (
+    '550e8400-e29b-41d4-a716-446655440030',
+    '550e8400-e29b-41d4-a716-446655440003',
+    'https://cdn-luma.com/285dad34964ab19970fffa5f9b352a1ce5f5c1c7f730ff5bda2ce50f27dd0619/Moses_by_Nitzan_Avidor_thumb.jpg',
+    'https://lumalabs.ai/capture/b86b7928-f130-40a5-8cac-8095f30eed54',
+    true,
+    '성운 가우시안 스플래팅 비주얼 ✨ 환상적인 우주 공간',
+    'Digital Art',
+    ARRAY['성운', '우주', '디지털아트', 'GaussianSplatting'],
+    NOW() - INTERVAL '20 hours'
+  ),
+  -- Post 21 (from mockData) - 알프스 겨울 풍경
+  (
+    '550e8400-e29b-41d4-a716-446655440031',
+    '550e8400-e29b-41d4-a716-446655440001',
+    'https://cdn-luma.com/987a90166b489fddab714f548f5b2fb6558cd7f102c5021913fc4289f75a013b/Former_U_S_National_Bank_thumb.jpg',
+    'https://lumalabs.ai/capture/4da7cf32-865a-4515-8cb9-9dfc574c90c2',
+    true,
+    '알프스 산맥의 겨울 풍경 ❄️ 눈 덮인 산들의 장관',
+    'Arosa, 스위스',
+    ARRAY['스위스', '알프스', '설경', '겨울여행'],
+    NOW() - INTERVAL '21 hours'
+  ),
+  -- Post 22 (from mockData) - 빈티지 지구본
+  (
+    '550e8400-e29b-41d4-a716-446655440032',
+    '550e8400-e29b-41d4-a716-446655440002',
+    'https://cdn-luma.com/9e17d0d3af2763f04f279f832a5389b6f29beabe1db61ded704e9e40adbadc67/Sundial_by_janiefitzgeral_thumb.jpg',
+    'https://lumalabs.ai/capture/ca9ea966-ca24-4ec1-ab0f-af665cb546ff',
+    true,
+    '빈티지 지구본 컬렉션 🌍 360도 회전해서 감상하세요',
+    'MIT Campus',
+    ARRAY['빈티지', '지구본', '인테리어', '컬렉션'],
+    NOW() - INTERVAL '22 hours'
   )
 ON CONFLICT (id) DO UPDATE SET
   caption = EXCLUDED.caption,

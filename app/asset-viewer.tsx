@@ -41,11 +41,8 @@ export default function AssetViewerScreen() {
 
   const loadPost = async () => {
     try {
-      const posts = await api.getFeed();
-      const foundPost = posts.find(p => p.id === postId);
-      if (foundPost) {
-        setPost(foundPost);
-      }
+      const post = await api.getPost(postId);
+      setPost(post);
     } catch (error) {
       console.error('Failed to load post:', error);
     } finally {
