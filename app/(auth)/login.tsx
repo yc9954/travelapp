@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as AuthSession from 'expo-auth-session';
 import { Link, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -26,7 +26,15 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const { login, refreshAuth } = useAuth();
+  const { login, refreshAuth, isAuthenticated, isLoading: authLoading } = useAuth();
+
+  // 로그인 성공 시 자동으로 피드로 이동
+  useEffect(() => {
+    if (isAuthenticated && !authLoading) {
+      console.log('User is authenticated, navigating to feed');
+      router.replace('/(tabs)/feed');
+    }
+  }, [isAuthenticated, authLoading]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -37,7 +45,7 @@ export default function LoginScreen() {
     setIsLoading(true);
     try {
       await login({ email, password });
-      router.replace('/(tabs)/feed');
+      // useEffect에서 isAuthenticated가 true가 되면 자동으로 feed로 이동
     } catch (error: any) {
       Alert.alert(
         '로그인 실패',
@@ -148,11 +156,9 @@ export default function LoginScreen() {
                 return;
               }
 
-              // AuthContext가 onAuthStateChange를 통해 사용자 정보를 업데이트할 시간을 줌
-              await new Promise(resolve => setTimeout(resolve, 500));
-
-              console.log('Google login success, navigating to feed');
-              router.replace('/(tabs)/feed');
+              // AuthContext가 onAuthStateChange를 통해 사용자 정보를 업데이트함
+              // useEffect에서 isAuthenticated가 true가 되면 자동으로 feed로 이동
+              console.log('Google login success, waiting for auth context update...');
             } else {
               console.error('No access token found in URL');
               Alert.alert('로그인 실패', '인증 토큰을 찾을 수 없습니다.');
