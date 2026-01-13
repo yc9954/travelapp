@@ -120,11 +120,6 @@ export default function UserProfileScreen() {
         source={{ uri: item.imageUrl }}
         style={styles.gridImage}
       />
-      {item.is3D && (
-        <View style={styles.gridBadge}>
-          <Text style={styles.gridBadgeText}>3D</Text>
-        </View>
-      )}
     </TouchableOpacity>
   );
 
@@ -168,7 +163,14 @@ export default function UserProfileScreen() {
               source={{ uri: user.profileImage || 'https://cdn-luma.com/public/avatars/avatar-default.jpg' }}
               style={styles.profileImage}
             />
-            <Text style={styles.username}>{user.username}</Text>
+            <View style={styles.usernameContainer}>
+              <Text style={styles.username}>{user.username}</Text>
+              {user.followersCount >= 5000 && (
+                <View style={styles.verifiedBadge}>
+                  <Ionicons name="checkmark-circle" size={20} color="#3B82F6" />
+                </View>
+              )}
+            </View>
             {user.bio && <Text style={styles.bio}>{user.bio}</Text>}
 
             <View style={styles.stats}>
@@ -266,12 +268,21 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
+  usernameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+    gap: 6,
+  },
   username: {
     fontSize: 26,
     fontWeight: '700',
     color: '#1F2937',
-    marginBottom: 8,
     letterSpacing: -0.5,
+  },
+  verifiedBadge: {
+    marginLeft: 4,
   },
   bio: {
     fontSize: 15,
@@ -349,20 +360,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     backgroundColor: '#F3F4F6',
-  },
-  gridBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  gridBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '700',
   },
   centerContainer: {
     flex: 1,

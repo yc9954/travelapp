@@ -16,8 +16,17 @@ import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { api } from '../services/api';
+import { lumaGalleryAssets } from '../services/mockData';
 
 type EditMode = 'none' | 'removeBackground' | 'addText';
+
+// 성운 에셋 찾기
+const nebulaAsset = lumaGalleryAssets.find(asset => 
+  asset.name.toLowerCase().includes('nebula') || 
+  asset.captureUrl === 'https://lumalabs.ai/capture/b86b7928-f130-40a5-8cac-8095f30eed54'
+);
+const NEBULA_THUMBNAIL_URL = nebulaAsset?.thumbnail || '';
+const NEBULA_CAPTURE_URL = nebulaAsset?.captureUrl || '';
 
 export default function EditAssetScreen() {
   const params = useLocalSearchParams<{ imageUrl?: string; captureUrl?: string; isLuma?: string }>();
@@ -329,8 +338,15 @@ export default function EditAssetScreen() {
         .filter(tag => tag.startsWith('#'))
         .map(tag => tag.substring(1));
 
+      // 성운 에셋인지 확인 (captureUrl 또는 imageUrl로 판단)
+      const isNebulaAsset = (captureUrl && captureUrl === NEBULA_CAPTURE_URL) || 
+                           (imageUrl && (imageUrl === NEBULA_THUMBNAIL_URL || imageUrl.includes('Nebula_Gaussian_Splatting')));
+
+      // 성운 에셋인 경우 성운 섬네일 URL 사용
+      const finalImageUrl = isNebulaAsset ? NEBULA_THUMBNAIL_URL : imageUrl;
+
       await api.createPost({
-        imageUrl: imageUrl,
+        imageUrl: finalImageUrl,
         image3dUrl: isLuma ? captureUrl : undefined,
         is3D: isLuma,
         caption: caption,

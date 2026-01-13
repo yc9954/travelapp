@@ -61,14 +61,6 @@ export function PostCard({ post, onLike, onComment, onViewPost, onUserPress }: P
               }}
             />
           )}
-          {post.is3D && !imageError && (
-            <View style={styles.badge3DContainer}>
-              <View style={styles.badge3D}>
-                <Ionicons name="cube-outline" size={14} color="#FFFFFF" style={{ marginRight: 4 }} />
-                <Text style={styles.badge3DText}>3D</Text>
-              </View>
-            </View>
-          )}
         </View>
       </TouchableOpacity>
 
@@ -158,29 +150,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     marginTop: 2,
-  },
-  badge3DContainer: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-  },
-  badge3D: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(59, 130, 246, 0.9)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  badge3DText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
   },
   imageContainer: {
     width: '100%',

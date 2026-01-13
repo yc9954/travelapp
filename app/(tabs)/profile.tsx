@@ -42,12 +42,12 @@ export default function ProfileScreen() {
 
   const handleLogout = () => {
     Alert.alert(
-      '로그아웃',
-      '정말 로그아웃하시겠습니까?',
+      'Logout',
+      'Are you sure you want to logout?',
       [
-        { text: '취소', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: '로그아웃',
+          text: 'Logout',
           style: 'destructive',
           onPress: async () => {
             await logout();
@@ -89,36 +89,43 @@ export default function ProfileScreen() {
               source={{ uri: user.profileImage || 'https://cdn-luma.com/public/avatars/avatar-default.jpg' }}
               style={styles.profileImage}
             />
-            <Text style={styles.username}>{user.username}</Text>
+            <View style={styles.usernameContainer}>
+              <Text style={styles.username}>{user.username}</Text>
+              {user.followersCount >= 5000 && (
+                <View style={styles.verifiedBadge}>
+                  <Ionicons name="checkmark-circle" size={20} color="#3B82F6" />
+                </View>
+              )}
+            </View>
             {user.bio && <Text style={styles.bio}>{user.bio}</Text>}
 
             <View style={styles.stats}>
               <View style={styles.stat}>
                 <Text style={styles.statNumber}>{user.postsCount}</Text>
-                <Text style={styles.statLabel}>게시물</Text>
+                <Text style={styles.statLabel}>Posts</Text>
               </View>
               <TouchableOpacity
                 style={styles.stat}
                 onPress={() => router.push(`/user/${user.id}/followers`)}
               >
                 <Text style={styles.statNumber}>{user.followersCount}</Text>
-                <Text style={styles.statLabel}>팔로워</Text>
+                <Text style={styles.statLabel}>Followers</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.stat}
                 onPress={() => router.push(`/user/${user.id}/following`)}
               >
                 <Text style={styles.statNumber}>{user.followingCount}</Text>
-                <Text style={styles.statLabel}>팔로잉</Text>
+                <Text style={styles.statLabel}>Following</Text>
               </TouchableOpacity>
             </View>
 
             <TouchableOpacity style={styles.editButton}>
-              <Text style={styles.editButtonText}>프로필 편집</Text>
+              <Text style={styles.editButtonText}>Edit Profile</Text>
             </TouchableOpacity>
 
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>내 게시물</Text>
+              <Text style={styles.sectionTitle}>My Posts</Text>
             </View>
           </View>
         }
@@ -131,12 +138,12 @@ export default function ProfileScreen() {
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="images-outline" size={64} color="#D1D5DB" />
-              <Text style={styles.emptyText}>아직 게시물이 없습니다</Text>
+              <Text style={styles.emptyText}>No posts yet</Text>
               <TouchableOpacity
                 style={styles.uploadButton}
                 onPress={() => router.push('/(tabs)/upload')}
               >
-                <Text style={styles.uploadButtonText}>첫 게시물 올리기</Text>
+                <Text style={styles.uploadButtonText}>Upload First Post</Text>
               </TouchableOpacity>
             </View>
           )
@@ -186,12 +193,21 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
+  usernameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+    gap: 6,
+  },
   username: {
     fontSize: 26,
     fontWeight: '700',
     color: '#1F2937',
-    marginBottom: 8,
     letterSpacing: -0.5,
+  },
+  verifiedBadge: {
+    marginLeft: 4,
   },
   bio: {
     fontSize: 15,
@@ -261,20 +277,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     backgroundColor: '#F3F4F6',
-  },
-  gridBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  gridBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '700',
   },
   centerContainer: {
     flex: 1,

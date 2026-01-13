@@ -141,16 +141,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  badge3D: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: '#3B82F6',
-    borderRadius: 12,
-    padding: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   overlay: {
     position: 'absolute',
     bottom: 0,

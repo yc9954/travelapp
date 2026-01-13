@@ -223,23 +223,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#F3F4F6',
   },
-  badge3D: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(59, 130, 246, 0.9)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
-  },
-  badge3DText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '700',
-  },
   statsOverlay: {
     position: 'absolute',
     bottom: 8,

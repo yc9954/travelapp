@@ -12,7 +12,8 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { lumaGalleryAssets } from '../../services/mockData';
@@ -96,15 +97,43 @@ export default function UploadScreen() {
     });
   };
 
-  const renderLumaAsset = ({ item }: { item: typeof lumaGalleryAssets[0] }) => {
-    const isSelected = selectedLumaAsset?.id === item.id;
+  const LumaAssetItem = ({ item, isSelected, onPress }: { 
+    item: typeof lumaGalleryAssets[0]; 
+    isSelected: boolean; 
+    onPress: () => void;
+  }) => {
+    const [imageLoading, setImageLoading] = useState(true);
+    const [imageError, setImageError] = useState(false);
 
     return (
       <TouchableOpacity
         style={styles.lumaAssetItem}
-        onPress={() => handleLumaAssetSelect(item)}
+        onPress={onPress}
+        activeOpacity={0.8}
       >
-        <Image source={{ uri: item.thumbnail }} style={styles.lumaAssetImage} />
+        {imageLoading && (
+          <View style={styles.imageLoadingContainer}>
+            <ActivityIndicator size="small" color="#9CA3AF" />
+          </View>
+        )}
+        {imageError ? (
+          <View style={styles.imageErrorContainer}>
+            <Ionicons name="image-outline" size={32} color="#D1D5DB" />
+          </View>
+        ) : (
+          <Image 
+            key={item.thumbnail}
+            source={{ uri: item.thumbnail }} 
+            style={styles.lumaAssetImage}
+            resizeMode="cover"
+            onLoadStart={() => setImageLoading(true)}
+            onLoadEnd={() => setImageLoading(false)}
+            onError={() => {
+              setImageLoading(false);
+              setImageError(true);
+            }}
+          />
+        )}
         {isSelected && (
           <View style={styles.selectedOverlay}>
             <Ionicons name="checkmark-circle" size={32} color="#60A5FA" />
@@ -114,6 +143,18 @@ export default function UploadScreen() {
           <Text style={styles.lumaBadgeText}>3D</Text>
         </View>
       </TouchableOpacity>
+    );
+  };
+
+  const renderLumaAsset = ({ item }: { item: typeof lumaGalleryAssets[0] }) => {
+    const isSelected = selectedLumaAsset?.id === item.id;
+
+    return (
+      <LumaAssetItem
+        item={item}
+        isSelected={isSelected}
+        onPress={() => handleLumaAssetSelect(item)}
+      />
     );
   };
 
@@ -393,6 +434,28 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 12,
     backgroundColor: '#F3F4F6',
+  },
+  imageLoadingContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+  },
+  imageErrorContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
   },
   selectedOverlay: {
     position: 'absolute',
