@@ -115,8 +115,55 @@ export const SupabaseAPI = {
       .eq('id', userId)
       .single();
 
-    if (error) throw error;
-    return convertProfile(data);
+    // Profile이 존재하면 반환
+    if (!error && data) {
+      return convertProfile(data);
+    }
+
+    // PGRST116: 프로필이 없는 경우 (0 rows)
+    if (error && error.code === 'PGRST116') {
+      console.log('⚠️ Profile not found, creating new profile for user:', userId);
+
+      // 현재 사용자 정보 가져오기
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        throw new Error('Cannot create profile: User not authenticated');
+      }
+
+      // 새 프로필 생성
+      const username = user.user_metadata?.full_name
+        || user.user_metadata?.name
+        || user.user_metadata?.username
+        || user.email?.split('@')[0]
+        || 'user';
+
+      const { data: newProfile, error: createError } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          username: username,
+          email: user.email || '',
+          profile_image: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
+          bio: user.user_metadata?.bio || '',
+          followers_count: 0,
+          following_count: 0,
+          posts_count: 0,
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Failed to create profile:', createError);
+        throw createError;
+      }
+
+      console.log('✅ Profile created successfully');
+      return convertProfile(newProfile);
+    }
+
+    // 다른 에러는 그대로 throw
+    throw error;
   },
 
   async updateProfile(userId: string, updates: Partial<User>) {
