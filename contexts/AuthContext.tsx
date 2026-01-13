@@ -26,33 +26,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Supabase 인증 상태 변경 리스너 설정
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event, session?.user?.email);
-      
+
       if (event === 'SIGNED_IN' && session?.user) {
-        // 로그인 성공 시 사용자 정보 업데이트
+        // 로그인 성공 시 프로필 정보 가져오기
         const supabaseUser = session.user;
 
-        // Google OAuth에서 full_name, name, username 순으로 시도
-        const displayName = supabaseUser.user_metadata?.full_name
-          || supabaseUser.user_metadata?.name
-          || supabaseUser.user_metadata?.username
-          || supabaseUser.email?.split('@')[0]
-          || 'user';
+        try {
+          // Profile 테이블에서 실제 데이터 가져오기
+          const profile = await api.getUserProfile(supabaseUser.id);
+          await StorageService.saveAuthToken(session.access_token);
+          await StorageService.saveUserData(profile);
+          setUser(profile);
+        } catch (error) {
+          console.error('Failed to load profile on sign in:', error);
 
-        const convertedUser: User = {
-          id: supabaseUser.id,
-          email: supabaseUser.email || '',
-          username: displayName,
-          profileImage: supabaseUser.user_metadata?.avatar_url || supabaseUser.user_metadata?.picture,
-          bio: supabaseUser.user_metadata?.bio || '',
-          followersCount: 0,
-          followingCount: 0,
-          postsCount: 0,
-          createdAt: supabaseUser.created_at || new Date().toISOString(),
-        };
+          // Profile 로드 실패 시 기본 정보 사용
+          const displayName = supabaseUser.user_metadata?.full_name
+            || supabaseUser.user_metadata?.name
+            || supabaseUser.user_metadata?.username
+            || supabaseUser.email?.split('@')[0]
+            || 'user';
 
-        await StorageService.saveAuthToken(session.access_token);
-        await StorageService.saveUserData(convertedUser);
-        setUser(convertedUser);
+          const convertedUser: User = {
+            id: supabaseUser.id,
+            email: supabaseUser.email || '',
+            username: displayName,
+            profileImage: supabaseUser.user_metadata?.avatar_url || supabaseUser.user_metadata?.picture,
+            bio: supabaseUser.user_metadata?.bio || '',
+            followersCount: 0,
+            followingCount: 0,
+            postsCount: 0,
+            createdAt: supabaseUser.created_at || new Date().toISOString(),
+          };
+
+          await StorageService.saveAuthToken(session.access_token);
+          await StorageService.saveUserData(convertedUser);
+          setUser(convertedUser);
+        }
       } else if (event === 'SIGNED_OUT') {
         // 로그아웃 시 상태 초기화
         await StorageService.clearAll();
@@ -67,24 +77,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAuth = async () => {
     try {
-      // 먼저 StorageService에서 확인
-      const token = await StorageService.getAuthToken();
-      const userData = await StorageService.getUserData();
-
-      if (token && userData) {
-        setUser(userData);
-        setIsLoading(false);
-        return;
-      }
-
-      // StorageService에 없으면 Supabase 세션 확인
+      // 먼저 Supabase 세션 확인 (AsyncStorage에서 자동 복원)
       const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (session?.user && !error) {
-        // Supabase 사용자 정보를 AuthContext 형식에 맞게 변환
-        const supabaseUser = session.user;
 
-        // Google OAuth에서 full_name, name, username 순으로 시도
+      if (session?.user && !error) {
+        console.log('✅ Supabase session found:', session.user.email);
+
+        // Profile 정보 가져오기 (팔로워/팔로잉 카운트 포함)
+        try {
+          const profile = await api.getUserProfile(session.user.id);
+          await StorageService.saveAuthToken(session.access_token);
+          await StorageService.saveUserData(profile);
+          setUser(profile);
+          setIsLoading(false);
+          return;
+        } catch (profileError) {
+          console.error('Failed to load profile, using basic user info:', profileError);
+          // Profile 로드 실패 시 기본 정보 사용
+        }
+
+        // Profile 로드 실패 시 Supabase 사용자 정보 사용
+        const supabaseUser = session.user;
         const displayName = supabaseUser.user_metadata?.full_name
           || supabaseUser.user_metadata?.name
           || supabaseUser.user_metadata?.username
@@ -103,10 +116,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           createdAt: supabaseUser.created_at || new Date().toISOString(),
         };
 
-        // StorageService에 저장하여 다음번에는 빠르게 로드
         await StorageService.saveAuthToken(session.access_token);
         await StorageService.saveUserData(convertedUser);
         setUser(convertedUser);
+      } else {
+        console.log('❌ No Supabase session found');
+        // Supabase 세션이 없으면 로컬 데이터 확인 (폴백)
+        const token = await StorageService.getAuthToken();
+        const userData = await StorageService.getUserData();
+
+        if (token && userData) {
+          console.log('⚠️ Using local storage data (Supabase session missing)');
+          setUser(userData);
+        }
       }
     } catch (error) {
       console.error('Auth check error:', error);
