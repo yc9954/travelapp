@@ -179,7 +179,7 @@ VALUES
   (
     '550e8400-e29b-41d4-a716-446655440011',
     '550e8400-e29b-41d4-a716-446655440001',
-    'https://lumalabs.ai/capture/33aad979-c28e-41a5-b38b-7af0cce22302',
+    'https://cdn-luma.com/c5464e01c904a033180b9f87ba7e61fe363ab854a8842a9f66dbb99cffc4dc95/Arosa_Hörnli_Switzerland_thumb.jpg',
     'https://lumalabs.ai/capture/33aad979-c28e-41a5-b38b-7af0cce22302',
     true,
     '도시의 야경을 3D로 담다 🌃 건축물의 디테일이 생생하게!',
@@ -191,7 +191,7 @@ VALUES
   (
     '550e8400-e29b-41d4-a716-446655440012',
     '550e8400-e29b-41d4-a716-446655440002',
-    'https://lumalabs.ai/capture/202920f3-a10f-4eaa-9d4d-ec0de62b639a',
+    'https://cdn-luma.com/dae39f9834ce5ff37efd798c27669caad8f67969a188f74a2e387607773b3fa9/MIT_WPU_Globe_thumb.jpg',
     'https://lumalabs.ai/capture/202920f3-a10f-4eaa-9d4d-ec0de62b639a',
     true,
     '공원의 평화로운 풍경 🌳 자연을 360도로 담아보세요',
@@ -203,7 +203,7 @@ VALUES
   (
     '550e8400-e29b-41d4-a716-446655440013',
     '550e8400-e29b-41d4-a716-446655440003',
-    'https://lumalabs.ai/capture/a68f48e0-026f-4701-933c-457678434414',
+    'https://cdn-luma.com/998f66a10b35ecdc8ff532714eccd37ef567ba190b6b9a45833975e5b48fdf05/Dandelion_thumb.jpg',
     'https://lumalabs.ai/capture/a68f48e0-026f-4701-933c-457678434414',
     true,
     '역사적인 건물의 웅장함 🏛️ 시간이 멈춘 듯한 순간',
@@ -215,7 +215,7 @@ VALUES
   (
     '550e8400-e29b-41d4-a716-446655440014',
     '550e8400-e29b-41d4-a716-446655440001',
-    'https://lumalabs.ai/capture/685c79f5-0ed5-456f-a043-67e7d1379d03',
+    'https://cdn-luma.com/77b06b20dd103ee39f6c8fb54768068ce4f043c8f1cc238d563abe7e5c7a4a84/Jules_Desbois_La_Femme_l_thumb.jpg',
     'https://lumalabs.ai/capture/685c79f5-0ed5-456f-a043-67e7d1379d03',
     true,
     '실내 인테리어의 아름다움 ✨ 공간의 분위기를 그대로',
@@ -227,7 +227,7 @@ VALUES
   (
     '550e8400-e29b-41d4-a716-446655440015',
     '550e8400-e29b-41d4-a716-446655440002',
-    'https://lumalabs.ai/capture/0180b1f3-d3ef-4020-820a-22a36d94cb52',
+    'https://cdn-luma.com/76c1aafa17eb1377ff6cc9b8a246d58181a316bb0e33592dd1f657aaa0448ecd/Nebula_Gaussian_Splatting_thumb.jpg',
     'https://lumalabs.ai/capture/0180b1f3-d3ef-4020-820a-22a36d94cb52',
     true,
     '예술 작품을 새로운 시각으로 🎨 모든 각도에서 감상하세요',
@@ -239,7 +239,7 @@ VALUES
   (
     '550e8400-e29b-41d4-a716-446655440016',
     '550e8400-e29b-41d4-a716-446655440003',
-    'https://lumalabs.ai/capture/d73e294a-b07a-4e97-b84b-8da3bb34ab5c',
+    'https://cdn-luma.com/c5464e01c904a033180b9f87ba7e61fe363ab854a8842a9f66dbb99cffc4dc95/Arosa_Hörnli_Switzerland_thumb.jpg',
     'https://lumalabs.ai/capture/d73e294a-b07a-4e97-b84b-8da3bb34ab5c',
     true,
     '자연의 세밀한 텍스처 🍃 매크로로 담은 생명력',
@@ -251,7 +251,7 @@ VALUES
   (
     '550e8400-e29b-41d4-a716-446655440017',
     '550e8400-e29b-41d4-a716-446655440001',
-    'https://lumalabs.ai/capture/0c2354fd-8e6a-402e-9c3c-40b3890b74b5',
+    'https://cdn-luma.com/dae39f9834ce5ff37efd798c27669caad8f67969a188f74a2e387607773b3fa9/MIT_WPU_Globe_thumb.jpg',
     'https://lumalabs.ai/capture/0c2354fd-8e6a-402e-9c3c-40b3890b74b5',
     true,
     '거리 풍경의 생동감 🚶‍♂️ 일상을 특별하게 기록하다',
@@ -263,7 +263,7 @@ VALUES
   (
     '550e8400-e29b-41d4-a716-446655440018',
     '550e8400-e29b-41d4-a716-446655440002',
-    'https://lumalabs.ai/capture/bb3e32e1-613a-41e5-a5d6-e5603576aa6b',
+    'https://cdn-luma.com/998f66a10b35ecdc8ff532714eccd37ef567ba190b6b9a45833975e5b48fdf05/Dandelion_thumb.jpg',
     'https://lumalabs.ai/capture/bb3e32e1-613a-41e5-a5d6-e5603576aa6b',
     true,
     '오브제의 입체감 🎭 조형미를 모든 방향에서',
@@ -275,7 +275,7 @@ VALUES
   (
     '550e8400-e29b-41d4-a716-446655440019',
     '550e8400-e29b-41d4-a716-446655440003',
-    'https://lumalabs.ai/capture/a9bca50d-89bb-4e1d-ac01-af1c1cbd74cb',
+    'https://cdn-luma.com/77b06b20dd103ee39f6c8fb54768068ce4f043c8f1cc238d563abe7e5c7a4a84/Jules_Desbois_La_Femme_l_thumb.jpg',
     'https://lumalabs.ai/capture/a9bca50d-89bb-4e1d-ac01-af1c1cbd74cb',
     true,
     '전통 건축의 아름다움 🏯 역사가 살아 숨쉬는 공간',
@@ -287,7 +287,7 @@ VALUES
   (
     '550e8400-e29b-41d4-a716-446655440020',
     '550e8400-e29b-41d4-a716-446655440001',
-    'https://lumalabs.ai/capture/8c21729b-eed9-479e-8d21-68c35035b47b',
+    'https://cdn-luma.com/76c1aafa17eb1377ff6cc9b8a246d58181a316bb0e33592dd1f657aaa0448ecd/Nebula_Gaussian_Splatting_thumb.jpg',
     'https://lumalabs.ai/capture/8c21729b-eed9-479e-8d21-68c35035b47b',
     true,
     '현대 미술의 새로운 해석 🖼️ 가우시안 스플래팅으로 재탄생',
@@ -299,7 +299,7 @@ VALUES
   (
     '550e8400-e29b-41d4-a716-446655440021',
     '550e8400-e29b-41d4-a716-446655440002',
-    'https://lumalabs.ai/capture/a4572635-8066-45d2-94b5-ffd4c55a92f0',
+    'https://cdn-luma.com/c5464e01c904a033180b9f87ba7e61fe363ab854a8842a9f66dbb99cffc4dc95/Arosa_Hörnli_Switzerland_thumb.jpg',
     'https://lumalabs.ai/capture/a4572635-8066-45d2-94b5-ffd4c55a92f0',
     true,
     '카페의 아늑한 분위기 ☕ 공간의 따뜻함을 담다',
@@ -311,7 +311,7 @@ VALUES
   (
     '550e8400-e29b-41d4-a716-446655440022',
     '550e8400-e29b-41d4-a716-446655440003',
-    'https://lumalabs.ai/capture/dbf30400-7e8e-43e5-a9e9-43836b486c53',
+    'https://cdn-luma.com/dae39f9834ce5ff37efd798c27669caad8f67969a188f74a2e387607773b3fa9/MIT_WPU_Globe_thumb.jpg',
     'https://lumalabs.ai/capture/dbf30400-7e8e-43e5-a9e9-43836b486c53',
     true,
     '자연광이 만드는 예술 🌅 빛과 그림자의 조화',
@@ -323,7 +323,7 @@ VALUES
   (
     '550e8400-e29b-41d4-a716-446655440023',
     '550e8400-e29b-41d4-a716-446655440001',
-    'https://lumalabs.ai/capture/0b4de2ed-1621-4954-900f-0a94220071f2',
+    'https://cdn-luma.com/998f66a10b35ecdc8ff532714eccd37ef567ba190b6b9a45833975e5b48fdf05/Dandelion_thumb.jpg',
     'https://lumalabs.ai/capture/0b4de2ed-1621-4954-900f-0a94220071f2',
     true,
     '복잡한 구조의 세밀함 🔧 기계적 아름다움을 3D로',
@@ -335,7 +335,7 @@ VALUES
   (
     '550e8400-e29b-41d4-a716-446655440024',
     '550e8400-e29b-41d4-a716-446655440002',
-    'https://lumalabs.ai/capture/79016186-c892-4956-a256-2f6c00ca6ce0',
+    'https://cdn-luma.com/77b06b20dd103ee39f6c8fb54768068ce4f043c8f1cc238d563abe7e5c7a4a84/Jules_Desbois_La_Femme_l_thumb.jpg',
     'https://lumalabs.ai/capture/79016186-c892-4956-a256-2f6c00ca6ce0',
     true,
     '자연 속 숨겨진 보석 💎 발견의 기쁨을 공유합니다',
