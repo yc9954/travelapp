@@ -30,10 +30,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === 'SIGNED_IN' && session?.user) {
         // 로그인 성공 시 사용자 정보 업데이트
         const supabaseUser = session.user;
+
+        // Google OAuth에서 full_name, name, username 순으로 시도
+        const displayName = supabaseUser.user_metadata?.full_name
+          || supabaseUser.user_metadata?.name
+          || supabaseUser.user_metadata?.username
+          || supabaseUser.email?.split('@')[0]
+          || 'user';
+
         const convertedUser: User = {
           id: supabaseUser.id,
           email: supabaseUser.email || '',
-          username: supabaseUser.user_metadata?.username || supabaseUser.email?.split('@')[0] || 'user',
+          username: displayName,
           profileImage: supabaseUser.user_metadata?.avatar_url || supabaseUser.user_metadata?.picture,
           bio: supabaseUser.user_metadata?.bio || '',
           followersCount: 0,
@@ -75,10 +83,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.user && !error) {
         // Supabase 사용자 정보를 AuthContext 형식에 맞게 변환
         const supabaseUser = session.user;
+
+        // Google OAuth에서 full_name, name, username 순으로 시도
+        const displayName = supabaseUser.user_metadata?.full_name
+          || supabaseUser.user_metadata?.name
+          || supabaseUser.user_metadata?.username
+          || supabaseUser.email?.split('@')[0]
+          || 'user';
+
         const convertedUser: User = {
           id: supabaseUser.id,
           email: supabaseUser.email || '',
-          username: supabaseUser.user_metadata?.username || supabaseUser.email?.split('@')[0] || 'user',
+          username: displayName,
           profileImage: supabaseUser.user_metadata?.avatar_url || supabaseUser.user_metadata?.picture,
           bio: supabaseUser.user_metadata?.bio || '',
           followersCount: 0,

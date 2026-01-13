@@ -1,7 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { Post } from '../types';
 
 const AUTH_TOKEN_KEY = '@travelspace3d_auth_token';
 const USER_DATA_KEY = '@travelspace3d_user_data';
+const USER_POSTS_KEY = '@travelspace3d_user_posts';
 
 export const StorageService = {
   async saveAuthToken(token: string): Promise<void> {
@@ -29,7 +31,22 @@ export const StorageService = {
     await AsyncStorage.removeItem(USER_DATA_KEY);
   },
 
+  async saveUserPosts(posts: Post[]): Promise<void> {
+    await AsyncStorage.setItem(USER_POSTS_KEY, JSON.stringify(posts));
+  },
+
+  async getUserPosts(): Promise<Post[]> {
+    const data = await AsyncStorage.getItem(USER_POSTS_KEY);
+    return data ? JSON.parse(data) : [];
+  },
+
+  async addUserPost(post: Post): Promise<void> {
+    const posts = await this.getUserPosts();
+    posts.unshift(post);
+    await this.saveUserPosts(posts);
+  },
+
   async clearAll(): Promise<void> {
-    await AsyncStorage.multiRemove([AUTH_TOKEN_KEY, USER_DATA_KEY]);
+    await AsyncStorage.multiRemove([AUTH_TOKEN_KEY, USER_DATA_KEY, USER_POSTS_KEY]);
   },
 };
