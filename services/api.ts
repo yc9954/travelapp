@@ -12,7 +12,7 @@ import type {
 } from '../types';
 
 // Mock 모드 활성화 (백엔드 없이 테스트하려면 true로 설정)
-const USE_MOCK_API = true;
+const USE_MOCK_API = false;
 
 const API_BASE_URL = __DEV__
   ? 'http://10.0.2.2:3000/api'
