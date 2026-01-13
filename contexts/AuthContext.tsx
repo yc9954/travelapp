@@ -121,12 +121,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(convertedUser);
       } else {
         console.log('❌ No Supabase session found');
-        // Supabase 세션이 없으면 로컬 데이터 확인 (폴백)
+        // Supabase 세션이 없지만 로컬 스토리지에 데이터가 있는 경우
+        // 이는 이전 버전에서 마이그레이션된 사용자일 수 있음
         const token = await StorageService.getAuthToken();
         const userData = await StorageService.getUserData();
 
         if (token && userData) {
-          console.log('⚠️ Using local storage data (Supabase session missing)');
+          console.log('⚠️ Local storage data found but Supabase session missing');
+          console.log('⚠️ Please log out and log in again to restore full functionality');
+          // 로컬 데이터를 사용하되, 기능 제한 경고
           setUser(userData);
         }
       }
