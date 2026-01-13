@@ -411,14 +411,14 @@ export const SupabaseAPI = {
   // ==================== Follows ====================
 
   async followUser(userId: string) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
-    if (user.id === userId) throw new Error('Cannot follow yourself');
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) throw new Error('Not authenticated');
+    if (session.user.id === userId) throw new Error('Cannot follow yourself');
 
     const { error } = await supabase
       .from('follows')
       .insert({
-        follower_id: user.id,
+        follower_id: session.user.id,
         following_id: userId,
       });
 
@@ -426,26 +426,26 @@ export const SupabaseAPI = {
   },
 
   async unfollowUser(userId: string) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) throw new Error('Not authenticated');
 
     const { error } = await supabase
       .from('follows')
       .delete()
-      .eq('follower_id', user.id)
+      .eq('follower_id', session.user.id)
       .eq('following_id', userId);
 
     if (error) throw error;
   },
 
   async isFollowing(userId: string): Promise<boolean> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return false;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return false;
 
     const { data, error } = await supabase
       .from('follows')
       .select('id')
-      .eq('follower_id', user.id)
+      .eq('follower_id', session.user.id)
       .eq('following_id', userId)
       .single();
 
