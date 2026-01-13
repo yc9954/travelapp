@@ -29,9 +29,11 @@ export default function UserProfileScreen() {
     if (id) {
       loadUserProfile();
       loadUserPosts();
-      checkFollowStatus();
+      if (currentUser) {
+        checkFollowStatus();
+      }
     }
-  }, [id]);
+  }, [id, currentUser]);
 
   const loadUserProfile = async () => {
     if (!id) return;
@@ -59,10 +61,10 @@ export default function UserProfileScreen() {
   };
 
   const checkFollowStatus = async () => {
-    if (!id) return;
+    if (!id || !currentUser) return;
 
     try {
-      const following = await api.isFollowing(id);
+      const following = await api.isFollowing(id, currentUser.id);
       setIsFollowing(following);
     } catch (error) {
       console.error('Failed to check follow status:', error);
@@ -70,16 +72,19 @@ export default function UserProfileScreen() {
   };
 
   const handleFollowToggle = async () => {
-    if (!id || !user) return;
+    if (!id || !user || !currentUser) {
+      Alert.alert('오류', '로그인이 필요합니다.');
+      return;
+    }
 
     setIsFollowLoading(true);
     try {
       if (isFollowing) {
-        await api.unfollowUser(id);
+        await api.unfollowUser(id, currentUser.id);
         setIsFollowing(false);
         setUser({ ...user, followersCount: user.followersCount - 1 });
       } else {
-        await api.followUser(id);
+        await api.followUser(id, currentUser.id);
         setIsFollowing(true);
         setUser({ ...user, followersCount: user.followersCount + 1 });
       }
