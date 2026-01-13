@@ -35,7 +35,7 @@ export const lumaGalleryAssets = [
   {
     id: 'luma-1',
     name: 'Arosa Alps Switzerland',
-    thumbnail: 'https://cdn-luma.com/c5464e01c904a033180b9f87ba7e61fe363ab854a8842a9f66dbb99cffc4dc95/Arosa_Hörnli_Switzerland_thumb.jpg',
+    thumbnail: 'https://uvyttgmfepjyiglggmgz.supabase.co/storage/v1/object/public/post-images/KakaoTalk_Photo_2026-01-13-19-32-00.png',
     captureUrl: 'https://lumalabs.ai/capture/4da7cf32-865a-4515-8cb9-9dfc574c90c2',
   },
   {
@@ -59,7 +59,7 @@ export const lumaGalleryAssets = [
   {
     id: 'luma-5',
     name: 'Nebula Gaussian Splatting',
-    thumbnail: 'https://cdn-luma.com/76c1aafa17eb1377ff6cc9b8a246d58181a316bb0e33592dd1f657aaa0448ecd/Nebula_Gaussian_Splatting_thumb.jpg',
+    thumbnail: 'https://uvyttgmfepjyiglggmgz.supabase.co/storage/v1/object/public/post-images/KakaoTalk_Photo_2026-01-13-19-26-25.png',
     captureUrl: 'https://lumalabs.ai/capture/b86b7928-f130-40a5-8cac-8095f30eed54',
   },
 ];

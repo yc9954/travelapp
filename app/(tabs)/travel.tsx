@@ -16,7 +16,7 @@ import { travelAssets, type TravelAsset } from '../../services/mockData';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// Travel 에셋 데이터 사용
+// Use Travel asset data
 const sampleAssets = travelAssets;
 
 export default function TravelScreen() {
@@ -126,8 +126,8 @@ export default function TravelScreen() {
   <div id='map'></div>
 
   <script>
-    // MapLibre GL JS - API 키 불필요, 완전 무료 오픈소스
-    // Carto Positron 스타일 사용 (밝은 테마, 안정적)
+    // MapLibre GL JS - No API key required, completely free open source
+    // Using Carto Positron style (light theme, stable)
     const map = new maplibregl.Map({
       container: 'map',
       style: {
@@ -164,14 +164,14 @@ export default function TravelScreen() {
       preserveDrawingBuffer: true
     });
 
-    // 지도 객체를 전역 변수로 저장
+    // Store map object as global variable
     window.mapInstance = map;
 
     map.on('load', () => {
       const assets = ${JSON.stringify(sampleAssets)};
 
       assets.forEach(asset => {
-        // 커스텀 마커 엘리먼트 생성 (빨간색 원형 마커)
+        // Create custom marker element (red circular marker)
         const el = document.createElement('div');
         el.className = 'custom-marker';
         el.style.width = '16px';
@@ -194,12 +194,12 @@ export default function TravelScreen() {
           el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
         });
 
-        // 마커 생성
+        // Create marker
         const marker = new maplibregl.Marker(el)
           .setLngLat([asset.lon, asset.lat])
           .addTo(map);
 
-        // 팝업 생성
+        // Create popup
         const popupContent = document.createElement('div');
         popupContent.className = 'asset-popup';
         popupContent.innerHTML = \`
@@ -220,7 +220,7 @@ export default function TravelScreen() {
         marker.setPopup(popup);
       });
 
-      // 지도 로드 완료 메시지 전송
+      // Send map load complete message
       if (window.ReactNativeWebView) {
         window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'mapLoaded' }));
       }
@@ -228,7 +228,7 @@ export default function TravelScreen() {
 
     map.on('error', (e) => {
       console.error('MapLibre error:', e);
-      // 에러가 발생해도 계속 시도하도록 설정
+      // Continue trying even if error occurs
       if (window.ReactNativeWebView) {
         window.ReactNativeWebView.postMessage(JSON.stringify({ 
           type: 'mapError', 
@@ -237,7 +237,7 @@ export default function TravelScreen() {
       }
     });
 
-    // 타일 로드 에러 처리
+    // Handle tile load errors
     map.on('data', (e) => {
       if (e.dataType === 'source' && e.isSourceLoaded === false) {
         console.warn('Tile source load failed, retrying...');
@@ -255,7 +255,7 @@ export default function TravelScreen() {
       }
     }
 
-    // 검색 기능
+    // Search functionality
     window.searchLocation = function(query) {
       const searchQuery = encodeURIComponent(query);
       fetch(\`https://nominatim.openstreetmap.org/search?q=\${searchQuery}&format=json&limit=1\`)
@@ -292,7 +292,7 @@ export default function TravelScreen() {
           },
           (error) => {
             console.error('Geolocation error:', error);
-            // 에러 시 기본 위치로 이동
+            // Move to default location on error
             map.flyTo({
               center: [10, 20],
               zoom: 1.5,
@@ -301,7 +301,7 @@ export default function TravelScreen() {
           }
         );
       } else {
-        // Geolocation이 지원되지 않으면 기본 위치로 이동
+        // Move to default location if Geolocation is not supported
         map.flyTo({
           center: [10, 20],
           zoom: 1.5,
@@ -310,7 +310,7 @@ export default function TravelScreen() {
       }
     };
 
-    // 맵 중앙으로 리셋
+    // Reset map to center
     window.centerMap = function() {
       map.flyTo({
         center: [10, 20],
@@ -428,7 +428,7 @@ export default function TravelScreen() {
     controls.minDistance = 0.5;
     controls.maxDistance = 10;
 
-    // Splat 로드
+    // Load Splat
     const splat = new LumaSplatsThree({
       source: '${captureUrl}',
       enableThreeShaderIntegration: false,
@@ -456,14 +456,14 @@ export default function TravelScreen() {
 
     scene.add(splat);
 
-    // 애니메이션 루프
+    // Animation loop
     function animate() {
       requestAnimationFrame(animate);
       controls.update();
       renderer.render(scene, camera);
     }
 
-    // 리사이즈 핸들러
+    // Resize handler
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
@@ -472,7 +472,7 @@ export default function TravelScreen() {
 
     animate();
 
-    // React Native로 준비 완료 메시지 전송
+    // Send ready message to React Native
     if (window.ReactNativeWebView) {
       window.ReactNativeWebView.postMessage(JSON.stringify({
         type: 'viewerReady'
@@ -499,7 +499,7 @@ export default function TravelScreen() {
   const handleSearch = () => {
     if (!searchQuery.trim()) return;
     
-    // WebView에 검색 실행
+    // Execute search in WebView
     if (webViewRef.current) {
       const query = searchQuery.trim();
       webViewRef.current.injectJavaScript(`
@@ -562,12 +562,12 @@ export default function TravelScreen() {
         </View>
       )}
 
-      {/* AI Chat Button - 좌측 하단 */}
+      {/* AI Chat Button - Bottom left */}
       <TouchableOpacity style={styles.aiButton} onPress={() => setShowAIChat(true)}>
         <Ionicons name="sparkles" size={20} color="#60A5FA" />
       </TouchableOpacity>
 
-      {/* Current Location Button - 우측 하단 */}
+      {/* Current Location Button - Bottom right */}
       <TouchableOpacity style={styles.locationButton} onPress={handleCenterMap}>
         <Ionicons name="locate" size={24} color="#1F2937" />
       </TouchableOpacity>

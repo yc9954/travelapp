@@ -83,7 +83,7 @@ export default function ExploreScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>탐색</Text>
+        <Text style={styles.headerTitle}>Explore</Text>
       </View>
       <FlatList
         data={posts}

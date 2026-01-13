@@ -139,9 +139,6 @@ export default function UploadScreen() {
             <Ionicons name="checkmark-circle" size={32} color="#60A5FA" />
           </View>
         )}
-        <View style={styles.lumaBadge}>
-          <Text style={styles.lumaBadgeText}>3D</Text>
-        </View>
       </TouchableOpacity>
     );
   };
@@ -165,7 +162,7 @@ export default function UploadScreen() {
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        {/* 메인 업로드 옵션 */}
+        {/* Main upload options */}
         <View style={styles.mainOptions}>
           <View style={styles.optionsGrid}>
             <TouchableOpacity style={styles.optionCard} onPress={() => setShowLumaGallery(true)}>
@@ -191,7 +188,7 @@ export default function UploadScreen() {
           </View>
         </View>
 
-        {/* Luma 기능 소개 */}
+        {/* Luma features introduction */}
         <View style={styles.featuresSection}>
           <Text style={styles.featuresTitle}>Edit Features</Text>
 
@@ -233,7 +230,7 @@ export default function UploadScreen() {
         </View>
       </ScrollView>
 
-      {/* Luma 갤러리 모달 */}
+      {/* Luma gallery modal */}
       <Modal
         visible={showLumaGallery}
         animationType="slide"
