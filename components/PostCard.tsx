@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import type { Post } from '../types';
 
@@ -13,6 +14,135 @@ interface PostCardProps {
 export function PostCard({ post, onLike, onComment, onViewPost }: PostCardProps) {
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
+  const webViewRef = useRef<WebView>(null);
+
+  const getLuma3DViewerHTML = () => {
+    if (!post.is3D || !post.image3dUrl) return '';
+
+    const metadata = post.editMetadata || {};
+    const textOverlay = metadata.textOverlay || '';
+    const textPosition = metadata.textPosition || 'center';
+    const textColor = metadata.textColor || '#ffffff';
+    const removeBackground = metadata.removeBackground || false;
+
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { overflow: hidden; background: #000; }
+    canvas { display: block; width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.157.0/examples/jsm/",
+      "@lumaai/luma-web": "https://unpkg.com/@lumaai/luma-web@0.2.0/dist/library/luma-web.module.js"
+    }
+  }
+  </script>
+  <script type="module">
+    import { WebGLRenderer, PerspectiveCamera, Scene, Color, Texture, PlaneGeometry, MeshStandardMaterial, Mesh, DoubleSide } from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { LumaSplatsThree, LumaSplatsSemantics } from '@lumaai/luma-web';
+
+    const canvas = document.getElementById('canvas');
+    const renderer = new WebGLRenderer({ canvas, antialias: false, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight, false);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    const scene = new Scene();
+    scene.background = new Color('black');
+
+    const camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 0, 2);
+
+    const controls = new OrbitControls(camera, canvas);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.enablePan = true;
+    controls.enableZoom = true;
+
+    const splat = new LumaSplatsThree({
+      source: '${post.image3dUrl}',
+      enableThreeShaderIntegration: false,
+      particleRevealEnabled: true,
+    });
+
+    if (${removeBackground}) {
+      splat.semanticsMask = LumaSplatsSemantics.FOREGROUND;
+    }
+
+    scene.add(splat);
+
+    function createText(text, position, color) {
+      const textCanvas = document.createElement('canvas');
+      const context = textCanvas.getContext('2d');
+      textCanvas.width = 1024;
+      textCanvas.height = 512;
+      context.fillStyle = 'rgba(255, 255, 255, 0)';
+      context.fillRect(0, 0, textCanvas.width, textCanvas.height);
+      context.fillStyle = color || 'white';
+      context.font = '200px sans-serif';
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+      context.lineWidth = 5;
+      context.fillText(text, textCanvas.width / 2, textCanvas.height / 2);
+      context.strokeText(text, textCanvas.width / 2, textCanvas.height / 2);
+
+      const texture = new Texture(textCanvas);
+      texture.needsUpdate = true;
+
+      const geometry = new PlaneGeometry(5, 2.5);
+      const material = new MeshStandardMaterial({
+        map: texture,
+        transparent: false,
+        alphaTest: 0.5,
+        side: DoubleSide,
+        premultipliedAlpha: true,
+        emissive: color || 'white',
+        emissiveIntensity: 2,
+      });
+      const textPlane = new Mesh(geometry, material);
+
+      let yPos = position === 'top' ? 0.9 : position === 'bottom' ? -0.9 : 0;
+      textPlane.position.set(0.8, yPos, 0);
+      textPlane.rotation.y = Math.PI / 2;
+      textPlane.scale.setScalar(0.6);
+      return textPlane;
+    }
+
+    const textOverlay = '${textOverlay.replace(/'/g, "\\'")}';
+    if (textOverlay) {
+      scene.add(createText(textOverlay, '${textPosition}', '${textColor}'));
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight, false);
+    });
+
+    window.ReactNativeWebView?.postMessage(JSON.stringify({ type: 'ready' }));
+  </script>
+</body>
+</html>
+    `;
+  };
 
   return (
     <View style={styles.container}>
@@ -43,6 +173,23 @@ export function PostCard({ post, onLike, onComment, onViewPost }: PostCardProps)
               <Ionicons name="image-outline" size={64} color="#9CA3AF" />
               <Text style={styles.imageErrorText}>이미지를 불러올 수 없습니다</Text>
             </View>
+          ) : post.is3D && post.image3dUrl ? (
+            <WebView
+              ref={webViewRef}
+              source={{ html: getLuma3DViewerHTML() }}
+              style={styles.image}
+              javaScriptEnabled={true}
+              domStorageEnabled={true}
+              allowsInlineMediaPlayback={true}
+              mediaPlaybackRequiresUserAction={false}
+              onLoadEnd={() => setImageLoading(false)}
+              onError={() => {
+                setImageLoading(false);
+                setImageError(true);
+              }}
+              scrollEnabled={false}
+              bounces={false}
+            />
           ) : (
             <Image
               source={{ uri: post.imageUrl }}

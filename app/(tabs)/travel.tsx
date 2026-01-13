@@ -252,6 +252,70 @@ export default function TravelScreen() {
         }));
       }
     }
+
+    // 검색 기능
+    window.searchLocation = function(query) {
+      const searchQuery = encodeURIComponent(query);
+      fetch(\`https://nominatim.openstreetmap.org/search?q=\${searchQuery}&format=json&limit=1\`)
+        .then(response => response.json())
+        .then(results => {
+          if (results && results.length > 0) {
+            const result = results[0];
+            const lat = parseFloat(result.lat);
+            const lon = parseFloat(result.lon);
+            map.flyTo({
+              center: [lon, lat],
+              zoom: 12,
+              duration: 1000
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Geocoding error:', error);
+        });
+    };
+
+    // 현재 위치로 이동
+    window.getCurrentLocation = function() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            map.flyTo({
+              center: [lon, lat],
+              zoom: 12,
+              duration: 1000
+            });
+          },
+          (error) => {
+            console.error('Geolocation error:', error);
+            // 에러 시 기본 위치로 이동
+            map.flyTo({
+              center: [10, 20],
+              zoom: 1.5,
+              duration: 1000
+            });
+          }
+        );
+      } else {
+        // Geolocation이 지원되지 않으면 기본 위치로 이동
+        map.flyTo({
+          center: [10, 20],
+          zoom: 1.5,
+          duration: 1000
+        });
+      }
+    };
+
+    // 맵 중앙으로 리셋
+    window.centerMap = function() {
+      map.flyTo({
+        center: [10, 20],
+        zoom: 1.5,
+        duration: 1000
+      });
+    };
   </script>
 </body>
 </html>
@@ -406,72 +470,10 @@ export default function TravelScreen() {
 
     animate();
 
-    // 지도 제어 함수들을 전역으로 노출
-    window.searchLocation = function(query) {
-      const searchQuery = encodeURIComponent(query);
-      fetch(\`https://nominatim.openstreetmap.org/search?q=\${searchQuery}&format=json&limit=1\`)
-        .then(response => response.json())
-        .then(results => {
-          if (results && results.length > 0) {
-            const result = results[0];
-            const lat = parseFloat(result.lat);
-            const lon = parseFloat(result.lon);
-            map.flyTo({
-              center: [lon, lat],
-              zoom: 12,
-              duration: 1000
-            });
-          }
-        })
-        .catch(error => {
-          console.error('Geocoding error:', error);
-        });
-    };
-
-    window.centerMap = function() {
-      map.flyTo({
-        center: [10, 20],
-        zoom: 1.5,
-        duration: 1000
-      });
-    };
-
-    window.getCurrentLocation = function() {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-            map.flyTo({
-              center: [lon, lat],
-              zoom: 12,
-              duration: 1000
-            });
-          },
-          (error) => {
-            console.error('Geolocation error:', error);
-            // 에러 시 기본 위치로 이동
-            map.flyTo({
-              center: [10, 20],
-              zoom: 1.5,
-              duration: 1000
-            });
-          }
-        );
-      } else {
-        // Geolocation이 지원되지 않으면 기본 위치로 이동
-        map.flyTo({
-          center: [10, 20],
-          zoom: 1.5,
-          duration: 1000
-        });
-      }
-    };
-
     // React Native로 준비 완료 메시지 전송
     if (window.ReactNativeWebView) {
       window.ReactNativeWebView.postMessage(JSON.stringify({
-        type: 'mapReady'
+        type: 'viewerReady'
       }));
     }
   </script>
