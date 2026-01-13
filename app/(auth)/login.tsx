@@ -176,7 +176,17 @@ export default function LoginScreen() {
               // 로딩 상태는 AuthContext 업데이트 후 자동으로 해제됨
             } else {
               console.error('No tokens found in URL');
-              Alert.alert('로그인 실패', '인증 토큰을 찾을 수 없습니다. Supabase Redirect URL 설정을 확인해주세요.');
+              console.error('Redirect URL received:', result.url);
+              console.error('Expected tokens but got none. This usually means:');
+              console.error('1. Redirect URL not registered in Supabase Dashboard');
+              console.error('2. OAuth flow was cancelled or failed');
+              Alert.alert(
+                '로그인 실패',
+                '인증 토큰을 찾을 수 없습니다.\n\nSupabase Dashboard에서 Redirect URL을 등록해주세요:\n\n' +
+                'splatspace://*\n' +
+                'exp://10.249.14.50:8081\n' +
+                'exp://127.0.0.1:8081'
+              );
               setIsGoogleLoading(false);
             }
           } catch (urlError: any) {
