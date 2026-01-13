@@ -1,6 +1,5 @@
-import axios, { AxiosInstance } from 'axios';
+import { SupabaseAPI } from './supabase-api';
 import { StorageService } from './storage';
-import { mockPosts, mockUsers, createMockAuthResponse, delay, convertTravelAssetsToPosts } from './mockData';
 import type {
   AuthResponse,
   LoginRequest,
@@ -11,244 +10,143 @@ import type {
   Comment,
 } from '../types';
 
-// Mock 모드 활성화 (백엔드 없이 테스트하려면 true로 설정)
-const USE_MOCK_API = false;
-
-const API_BASE_URL = __DEV__
-  ? 'http://10.0.2.2:3000/api'
-  : 'https://api.travelspace3d.com/api';
-
 class ApiService {
-  private client: AxiosInstance;
-  private mockPosts: Post[] = [...mockPosts];
-
-  constructor() {
-    this.client = axios.create({
-      baseURL: API_BASE_URL,
-      timeout: 30000,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    this.client.interceptors.request.use(
-      async (config) => {
-        const token = await StorageService.getAuthToken();
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      (error) => Promise.reject(error)
-    );
-
-    this.client.interceptors.response.use(
-      (response) => response,
-      async (error) => {
-        if (error.response?.status === 401) {
-          await StorageService.clearAll();
-        }
-        return Promise.reject(error);
-      }
-    );
-  }
+  // ==================== Auth ====================
 
   async login(data: LoginRequest): Promise<AuthResponse> {
-    if (USE_MOCK_API) {
-      await delay(800); // 네트워크 지연 시뮬레이션
-      // Mock: 어떤 이메일/비밀번호든 로그인 성공
-      return createMockAuthResponse(data.email, data.email.split('@')[0]);
+    const authData = await SupabaseAPI.signInWithEmail(data.email, data.password);
+
+    if (!authData.user || !authData.session) {
+      throw new Error('Login failed');
     }
-    const response = await this.client.post<AuthResponse>('/auth/login', data);
-    return response.data;
+
+    // Get user profile
+    const profile = await SupabaseAPI.getProfile(authData.user.id);
+
+    // Save to storage
+    await StorageService.saveAuthToken(authData.session.access_token);
+    await StorageService.saveUserData(profile);
+
+    return {
+      user: profile,
+      token: authData.session.access_token,
+    };
   }
 
   async register(data: RegisterRequest): Promise<AuthResponse> {
-    if (USE_MOCK_API) {
-      await delay(800);
-      return createMockAuthResponse(data.email, data.username);
+    const authData = await SupabaseAPI.signUpWithEmail(
+      data.email,
+      data.password,
+      data.username
+    );
+
+    if (!authData.user || !authData.session) {
+      throw new Error('Registration failed');
     }
-    const response = await this.client.post<AuthResponse>('/auth/register', data);
-    return response.data;
+
+    // Get user profile (created by trigger)
+    const profile = await SupabaseAPI.getProfile(authData.user.id);
+
+    // Save to storage
+    await StorageService.saveAuthToken(authData.session.access_token);
+    await StorageService.saveUserData(profile);
+
+    return {
+      user: profile,
+      token: authData.session.access_token,
+    };
   }
 
-  async getFeed(page: number = 1, limit: number = 10): Promise<Post[]> {
-    if (USE_MOCK_API) {
-      await delay(500);
-      // 사용자가 업로드한 게시물 불러오기
-      const userUploadedPosts = await StorageService.getUserPosts();
-      // Travel 에셋과 일반 포스트를 합쳐서 반환
-      const travelPosts = convertTravelAssetsToPosts();
-      return [...userUploadedPosts, ...this.mockPosts, ...travelPosts];
-    }
-    const response = await this.client.get<Post[]>('/posts/feed', {
-      params: { page, limit },
-    });
-    return response.data;
+  // ==================== Posts ====================
+
+  async getFeed(page: number = 1, limit: number = 20): Promise<Post[]> {
+    return await SupabaseAPI.getFeed(page, limit);
   }
 
   async getUserPosts(userId: string): Promise<Post[]> {
-    if (USE_MOCK_API) {
-      await delay(500);
-      // Storage에서 사용자가 업로드한 게시물 불러오기
-      const userUploadedPosts = await StorageService.getUserPosts();
-      // Mock 게시물과 합치기 (사용자가 업로드한 것을 우선 표시)
-      const mockUserPosts = this.mockPosts.filter(post => post.userId === userId);
-      return [...userUploadedPosts.filter(post => post.userId === userId), ...mockUserPosts];
-    }
-    const response = await this.client.get<Post[]>(`/posts/user/${userId}`);
-    return response.data;
+    return await SupabaseAPI.getUserPosts(userId);
+  }
+
+  async getPost(postId: string): Promise<Post> {
+    return await SupabaseAPI.getPost(postId);
   }
 
   async createPost(data: CreatePostRequest): Promise<Post> {
-    if (USE_MOCK_API) {
-      await delay(1000);
-      const userData = await StorageService.getUserData();
-      const newPost: Post = {
-        id: Date.now().toString(),
-        userId: userData?.id || '1',
-        user: userData || mockUsers[0],
-        imageUrl: data.imageUrl,
-        image3dUrl: data.image3dUrl,
-        is3D: data.is3D,
-        caption: data.caption,
-        location: data.location,
-        hashtags: data.hashtags,
-        editMetadata: data.editMetadata,
-        likesCount: 0,
-        commentsCount: 0,
-        isLiked: false,
-        createdAt: new Date().toISOString(),
-      };
-      this.mockPosts.unshift(newPost); // 피드용
-      await StorageService.addUserPost(newPost); // Storage에 저장하여 프로필에 표시
+    const post = await SupabaseAPI.createPost(data);
 
-      // 사용자 게시물 수 업데이트
-      if (userData) {
-        userData.postsCount = (userData.postsCount || 0) + 1;
-        await StorageService.saveUserData(userData);
-      }
-
-      return newPost;
+    // Update local user data
+    const userData = await StorageService.getUserData();
+    if (userData) {
+      userData.postsCount = (userData.postsCount || 0) + 1;
+      await StorageService.saveUserData(userData);
     }
-    const response = await this.client.post<Post>('/posts', data);
-    return response.data;
+
+    return post;
   }
 
-  async likePost(postId: string): Promise<void> {
-    if (USE_MOCK_API) {
-      await delay(300);
-      const post = this.mockPosts.find(p => p.id === postId);
-      if (post) {
-        post.isLiked = true;
-        post.likesCount++;
-      }
-      return;
+  async deletePost(postId: string): Promise<void> {
+    await SupabaseAPI.deletePost(postId);
+
+    // Update local user data
+    const userData = await StorageService.getUserData();
+    if (userData) {
+      userData.postsCount = Math.max(0, (userData.postsCount || 1) - 1);
+      await StorageService.saveUserData(userData);
     }
-    await this.client.post(`/posts/${postId}/like`);
+  }
+
+  // ==================== Likes ====================
+
+  async likePost(postId: string): Promise<void> {
+    await SupabaseAPI.likePost(postId);
   }
 
   async unlikePost(postId: string): Promise<void> {
-    if (USE_MOCK_API) {
-      await delay(300);
-      const post = this.mockPosts.find(p => p.id === postId);
-      if (post) {
-        post.isLiked = false;
-        post.likesCount--;
-      }
-      return;
-    }
-    await this.client.delete(`/posts/${postId}/like`);
+    await SupabaseAPI.unlikePost(postId);
   }
 
-  async getUserProfile(userId: string): Promise<User> {
-    if (USE_MOCK_API) {
-      await delay(500);
-      return mockUsers.find(u => u.id === userId) || mockUsers[0];
-    }
-    const response = await this.client.get<User>(`/users/${userId}`);
-    return response.data;
+  async getPostLikes(postId: string): Promise<User[]> {
+    return await SupabaseAPI.getPostLikes(postId);
   }
 
-  async uploadImage(uri: string): Promise<string> {
-    if (USE_MOCK_API) {
-      await delay(1500);
-      // Mock: 그냥 원본 URI 반환 (실제로는 서버에 업로드)
-      return uri;
-    }
-    const formData = new FormData();
-    const filename = uri.split('/').pop() || 'image.jpg';
-    const match = /\.(\w+)$/.exec(filename);
-    const type = match ? `image/${match[1]}` : 'image/jpeg';
-
-    formData.append('image', {
-      uri,
-      name: filename,
-      type,
-    } as any);
-
-    const response = await this.client.post<{ url: string }>('/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-
-    return response.data.url;
-  }
+  // ==================== Comments ====================
 
   async getComments(postId: string): Promise<Comment[]> {
-    if (USE_MOCK_API) {
-      await delay(500);
-      // Mock 댓글 데이터 생성
-      const post = this.mockPosts.find(p => p.id === postId);
-      if (!post) return [];
-
-      const mockComments: Comment[] = [];
-      const commentCount = Math.min(post.commentsCount, 10); // 최대 10개만 반환
-
-      for (let i = 0; i < commentCount; i++) {
-        const randomUser = mockUsers[Math.floor(Math.random() * mockUsers.length)];
-        mockComments.push({
-          id: `comment_${postId}_${i}`,
-          postId,
-          userId: randomUser.id,
-          user: randomUser,
-          content: `이것은 ${i + 1}번째 댓글입니다. 정말 멋진 에셋이네요!`,
-          createdAt: new Date(Date.now() - (i * 3600000)).toISOString(),
-        });
-      }
-
-      return mockComments.sort((a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-    }
-    const response = await this.client.get<Comment[]>(`/posts/${postId}/comments`);
-    return response.data;
+    return await SupabaseAPI.getPostComments(postId);
   }
 
   async createComment(postId: string, content: string): Promise<Comment> {
-    if (USE_MOCK_API) {
-      await delay(500);
-      const userData = await StorageService.getUserData();
-      const post = this.mockPosts.find(p => p.id === postId);
+    return await SupabaseAPI.createComment(postId, content);
+  }
 
-      if (post) {
-        post.commentsCount++;
-      }
+  async deleteComment(commentId: string): Promise<void> {
+    await SupabaseAPI.deleteComment(commentId);
+  }
 
-      const newComment: Comment = {
-        id: `comment_${postId}_${Date.now()}`,
-        postId,
-        userId: userData?.id || '1',
-        user: userData || mockUsers[0],
-        content,
-        createdAt: new Date().toISOString(),
-      };
+  // ==================== Profile ====================
 
-      return newComment;
+  async getUserProfile(userId: string): Promise<User> {
+    return await SupabaseAPI.getProfile(userId);
+  }
+
+  async updateUserProfile(userId: string, updates: Partial<User>): Promise<User> {
+    const profile = await SupabaseAPI.updateProfile(userId, updates);
+
+    // Update local storage
+    const userData = await StorageService.getUserData();
+    if (userData && userData.id === userId) {
+      await StorageService.saveUserData(profile);
     }
-    const response = await this.client.post<Comment>(`/posts/${postId}/comments`, { content });
-    return response.data;
+
+    return profile;
+  }
+
+  // ==================== Upload ====================
+
+  async uploadImage(uri: string): Promise<string> {
+    // For now, return the URI as-is
+    // In production, upload to Supabase Storage
+    return uri;
   }
 }
 
