@@ -1,0 +1,65 @@
+// app.config.js
+// Expo SDK 54에서는 EXPO_PUBLIC_* 환경 변수를 자동으로 읽습니다
+// .env 파일이 있으면 자동으로 로드됩니다
+
+module.exports = {
+  expo: {
+    name: "SplatSpace",
+    slug: "splatspace",
+    version: "1.0.0",
+    orientation: "portrait",
+    icon: "./assets/images/logo.png",
+    scheme: "splatspace",
+    userInterfaceStyle: "automatic",
+    newArchEnabled: true,
+    ios: {
+      supportsTablet: true,
+      bundleIdentifier: "com.splatspace.app"
+    },
+    android: {
+      package: "com.splatspace.app",
+      adaptiveIcon: {
+        backgroundColor: "#000000",
+        foregroundImage: "./assets/images/android-icon-foreground.png",
+        backgroundImage: "./assets/images/android-icon-background.png",
+        monochromeImage: "./assets/images/android-icon-monochrome.png"
+      },
+      edgeToEdgeEnabled: true,
+      predictiveBackGestureEnabled: false,
+      permissions: [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES"
+      ]
+    },
+    web: {
+      output: "static",
+      favicon: "./assets/images/favicon.png"
+    },
+    splash: {
+      image: "./assets/images/splash-icon.png",
+      resizeMode: "contain",
+      backgroundColor: "#000000"
+    },
+    plugins: [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          photosPermission: "앱에서 여행 사진을 선택하고 3D로 변환하기 위해 사진 접근 권한이 필요합니다.",
+          cameraPermission: "여행 사진을 촬영하기 위해 카메라 권한이 필요합니다."
+        }
+      ]
+    ],
+    experiments: {
+      typedRoutes: true,
+      reactCompiler: true
+    },
+    extra: {
+      // 환경 변수를 extra에 명시적으로 포함
+      supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
+      supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+    }
+  }
+};

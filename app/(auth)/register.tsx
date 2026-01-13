@@ -66,9 +66,9 @@ export default function RegisterScreen() {
     try {
       setIsGoogleLoading(true);
       
-      // 여러 환경 변수 이름 지원
-      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.YOUR_REACT_NATIVE_SUPABASE_URL;
-      const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.YOUR_REACT_NATIVE_SUPABASE_ANON_KEY;
+      // 환경 변수 로드
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+      const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
       
       if (!supabaseUrl || !supabaseAnonKey) {
         Alert.alert(

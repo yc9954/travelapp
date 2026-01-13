@@ -138,6 +138,18 @@ export const SupabaseAPI = {
   // ==================== Posts ====================
 
   async getFeed(page: number = 1, limit: number = 20): Promise<Post[]> {
+    // 환경 변수 체크
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error(
+        'Supabase 환경 변수가 설정되지 않았습니다.\n' +
+        '프로젝트 루트에 .env 파일을 생성하고 EXPO_PUBLIC_SUPABASE_URL과 EXPO_PUBLIC_SUPABASE_ANON_KEY를 설정하세요.\n' +
+        '자세한 내용은 SUPABASE_SETUP.md를 참고하세요.'
+      );
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     const offset = (page - 1) * limit;
 
@@ -151,7 +163,27 @@ export const SupabaseAPI = {
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
-    if (error) throw error;
+    if (error) {
+      // 디버깅: 실제 에러 정보 출력
+      console.error('❌ Supabase 에러 상세 정보:');
+      console.error('  Code:', error.code);
+      console.error('  Message:', error.message);
+      console.error('  Details:', error.details);
+      console.error('  Hint:', error.hint);
+      console.error('  Full error:', JSON.stringify(error, null, 2));
+      
+      // Invalid API key 에러인 경우 더 명확한 메시지 제공
+      if (error.message?.includes('Invalid API key') || error.message?.includes('API key') || error.code === 'PGRST301') {
+        throw new Error(
+          'Supabase API 키가 유효하지 않습니다.\n' +
+          '.env 파일의 EXPO_PUBLIC_SUPABASE_URL과 EXPO_PUBLIC_SUPABASE_ANON_KEY를 확인하세요.\n' +
+          'Supabase 대시보드 > Settings > API에서 올바른 키를 복사했는지 확인하세요.\n' +
+          `에러 코드: ${error.code || 'N/A'}\n` +
+          `에러 메시지: ${error.message || 'N/A'}`
+        );
+      }
+      throw error;
+    }
 
     // Check if current user liked each post
     if (user) {
