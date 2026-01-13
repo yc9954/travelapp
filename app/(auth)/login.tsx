@@ -51,11 +51,11 @@ export default function LoginScreen() {
   const signInWithGoogle = async () => {
     try {
       setIsGoogleLoading(true);
-      
+
       // 여러 환경 변수 이름 지원
       const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.YOUR_REACT_NATIVE_SUPABASE_URL;
       const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.YOUR_REACT_NATIVE_SUPABASE_ANON_KEY;
-      
+
       if (!supabaseUrl || !supabaseAnonKey) {
         Alert.alert(
           '설정 필요',
@@ -72,27 +72,6 @@ export default function LoginScreen() {
       });
 
       console.log('Redirect URL:', redirectUrl);
-
-      // 인증 상태 변경을 감지하기 위한 Promise
-      let authResolved = false;
-      const authPromise = new Promise<void>((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          if (!authResolved) {
-            authResolved = true;
-            reject(new Error('인증 타임아웃'));
-          }
-        }, 60000); // 60초 타임아웃
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-          console.log('Auth state changed during OAuth:', event);
-          if (event === 'SIGNED_IN' && session?.user && !authResolved) {
-            clearTimeout(timeout);
-            authResolved = true;
-            subscription.unsubscribe();
-            resolve();
-          }
-        });
-      });
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -111,265 +90,85 @@ export default function LoginScreen() {
 
       if (data?.url) {
         console.log('Opening OAuth URL:', data.url);
-        
+
         // OAuth URL로 브라우저 열기
         const result = await WebBrowser.openAuthSessionAsync(
           data.url,
           redirectUrl
         );
 
-        console.log('OAuth result:', result.type, result.url);
+        console.log('OAuth result:', result.type);
 
-        // 인증 상태 변경을 기다림 (onAuthStateChange가 처리)
-        try {
-          await Promise.race([
-            authPromise,
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 30000))
-          ]);
-          
-          // 인증이 완료되면 사용자 정보 확인
-          const { data: { user: supabaseUser } } = await supabase.auth.getUser();
-          if (supabaseUser) {
-            console.log('OAuth completed via state change, user:', supabaseUser.email);
-            await refreshAuth();
-            router.replace('/(tabs)/feed');
-            return;
-          }
-        } catch (authError) {
-          console.log('Auth state change not detected, trying URL parsing...');
-        }
-
-        // URL에서 직접 토큰을 파싱하는 방법도 시도
-        if (result.type === 'success' && result.url) {
+        // URL에서 토큰 파싱하고 세션 설정
+        if ((result.type === 'success' || result.type === 'dismiss') && result.url) {
           try {
-            console.log('Parsing URL for tokens:', result.url);
-            
-            // exp:// 같은 커스텀 스킴을 처리하기 위해 정규식으로 먼저 파싱
+            console.log('Parsing URL for tokens');
+
+            // URL에서 토큰 추출
             let accessToken: string | null = null;
             let refreshToken: string | null = null;
 
-            // Hash fragment 전체를 추출 (# 이후의 모든 내용)
+            // Hash fragment (#) 파싱
             const hashIndex = result.url.indexOf('#');
             if (hashIndex !== -1) {
               const hashFragment = result.url.substring(hashIndex + 1);
-              console.log('Hash fragment:', hashFragment.substring(0, 100) + '...');
-              
-              // Hash fragment를 URLSearchParams로 파싱
-              try {
-                const hashParams = new URLSearchParams(hashFragment);
-                accessToken = hashParams.get('access_token');
-                refreshToken = hashParams.get('refresh_token');
-                console.log('Parsed from hash params:', { hasAccessToken: !!accessToken, hasRefreshToken: !!refreshToken });
-              } catch (e) {
-                console.log('Failed to parse hash as URLSearchParams, trying regex...');
-              }
+              const hashParams = new URLSearchParams(hashFragment);
+              accessToken = hashParams.get('access_token');
+              refreshToken = hashParams.get('refresh_token');
             }
 
-            // 정규식으로도 시도 (fallback)
+            // Query params (?) 파싱 (fallback)
             if (!accessToken) {
-              const hashMatch = result.url.match(/#access_token=([^&]+)/);
-              if (hashMatch) {
-                accessToken = decodeURIComponent(hashMatch[1]);
-              }
-            }
-
-            if (!refreshToken) {
-              const hashRefreshMatch = result.url.match(/#refresh_token=([^&]+)/);
-              if (hashRefreshMatch) {
-                refreshToken = decodeURIComponent(hashRefreshMatch[1]);
-              }
-            }
-
-            // Query params에서도 시도 (?access_token=...)
-            if (!accessToken) {
-              const queryMatch = result.url.match(/[?&]access_token=([^&]+)/);
-              if (queryMatch) {
-                accessToken = decodeURIComponent(queryMatch[1]);
-              }
-            }
-
-            if (!refreshToken) {
-              const queryRefreshMatch = result.url.match(/[?&]refresh_token=([^&]+)/);
-              if (queryRefreshMatch) {
-                refreshToken = decodeURIComponent(queryRefreshMatch[1]);
-              }
-            }
-
-            // 표준 URL 파싱도 시도 (fallback)
-            if (!accessToken || !refreshToken) {
               try {
                 const url = new URL(result.url);
-                if (!accessToken) {
-                  accessToken = url.searchParams.get('access_token');
-                  if (!accessToken && url.hash) {
-                    const hashParams = new URLSearchParams(url.hash.substring(1));
-                    accessToken = hashParams.get('access_token');
-                  }
-                }
-                if (!refreshToken) {
-                  refreshToken = url.searchParams.get('refresh_token');
-                  if (!refreshToken && url.hash) {
-                    const hashParams = new URLSearchParams(url.hash.substring(1));
-                    refreshToken = hashParams.get('refresh_token');
-                  }
-                }
-              } catch (urlError) {
-                console.log('Standard URL parsing failed (expected for custom schemes):', urlError);
+                accessToken = url.searchParams.get('access_token');
+                refreshToken = url.searchParams.get('refresh_token');
+              } catch (e) {
+                // Custom scheme일 경우 정규식 사용
+                const accessMatch = result.url.match(/[#&]access_token=([^&]+)/);
+                const refreshMatch = result.url.match(/[#&]refresh_token=([^&]+)/);
+                if (accessMatch) accessToken = decodeURIComponent(accessMatch[1]);
+                if (refreshMatch) refreshToken = decodeURIComponent(refreshMatch[1]);
               }
             }
 
-            console.log('Tokens extracted:', { hasAccessToken: !!accessToken, hasRefreshToken: !!refreshToken });
+            console.log('Tokens found:', { hasAccessToken: !!accessToken, hasRefreshToken: !!refreshToken });
 
             if (accessToken) {
-              console.log('Processing tokens...');
-              
-              // JWT 토큰에서 사용자 정보 추출 (setSession이 실패할 수 있으므로)
-              let userData;
-              try {
-                // JWT 디코딩
-                const jwtParts = accessToken.split('.');
-                if (jwtParts.length === 3) {
-                  // Base64 URL 디코딩
-                  const base64Url = jwtParts[1].replace(/-/g, '+').replace(/_/g, '/');
-                  const base64 = base64Url + '='.repeat((4 - base64Url.length % 4) % 4);
-                  const payload = JSON.parse(atob(base64));
-                  
-                  console.log('Decoded JWT payload:', { sub: payload.sub, email: payload.email });
-                  
-                  // JWT에서 사용자 정보 추출
-                  userData = {
-                    id: payload.sub,
-                    email: payload.email || '',
-                    username: payload.user_metadata?.full_name || payload.user_metadata?.name || payload.email?.split('@')[0] || 'user',
-                    profileImage: payload.user_metadata?.avatar_url || payload.user_metadata?.picture,
-                    bio: payload.user_metadata?.bio || '',
-                    followersCount: 0,
-                    followingCount: 0,
-                    postsCount: 0,
-                    createdAt: payload.iat ? new Date(payload.iat * 1000).toISOString() : new Date().toISOString(),
-                  };
-                } else {
-                  throw new Error('Invalid JWT format');
-                }
-              } catch (jwtError) {
-                console.error('JWT decoding error:', jwtError);
-                // JWT 디코딩 실패 시 setSession 시도
-                console.log('Falling back to setSession...');
-                
-                const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-                  access_token: accessToken,
-                  refresh_token: refreshToken || '',
-                });
+              // Supabase 세션 설정 - AuthContext의 onAuthStateChange가 자동으로 사용자 정보를 업데이트함
+              const { error: sessionError } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken || '',
+              });
 
-                if (sessionError) {
-                  console.error('Session error:', sessionError);
-                  Alert.alert('로그인 실패', '인증 처리에 실패했습니다. ' + sessionError.message);
-                  return;
-                }
-
-                // Supabase에서 사용자 정보 가져오기
-                const { data: { user: supabaseUser }, error: userError } = await supabase.auth.getUser();
-
-                if (userError || !supabaseUser) {
-                  console.error('Get user error:', userError);
-                  Alert.alert('로그인 실패', userError?.message || '사용자 정보를 가져오는데 실패했습니다.');
-                  return;
-                }
-
-                userData = {
-                  id: supabaseUser.id,
-                  email: supabaseUser.email || '',
-                  username: supabaseUser.user_metadata?.username || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'user',
-                  profileImage: supabaseUser.user_metadata?.avatar_url || supabaseUser.user_metadata?.picture,
-                  bio: supabaseUser.user_metadata?.bio || '',
-                  followersCount: 0,
-                  followingCount: 0,
-                  postsCount: 0,
-                  createdAt: supabaseUser.created_at || new Date().toISOString(),
-                };
+              if (sessionError) {
+                console.error('Session error:', sessionError);
+                Alert.alert('로그인 실패', '인증 처리에 실패했습니다.');
+                setIsGoogleLoading(false);
+                return;
               }
 
-              // AuthContext에 사용자 정보 저장
-              const { StorageService } = await import('../../services/storage');
-              await StorageService.saveAuthToken(accessToken);
-              await StorageService.saveUserData(userData);
-
-              // AuthContext 상태 즉시 업데이트
-              await refreshAuth();
+              // AuthContext가 onAuthStateChange를 통해 사용자 정보를 업데이트할 시간을 줌
+              await new Promise(resolve => setTimeout(resolve, 500));
 
               console.log('Google login success, navigating to feed');
-              // 홈 화면으로 이동
               router.replace('/(tabs)/feed');
             } else {
               console.error('No access token found in URL');
               Alert.alert('로그인 실패', '인증 토큰을 찾을 수 없습니다.');
+              setIsGoogleLoading(false);
             }
           } catch (urlError: any) {
             console.error('URL parsing error:', urlError);
-            Alert.alert('로그인 실패', 'URL 파싱 중 오류가 발생했습니다: ' + urlError.message);
+            Alert.alert('로그인 실패', 'URL 파싱 중 오류가 발생했습니다.');
+            setIsGoogleLoading(false);
           }
         } else if (result.type === 'cancel') {
           console.log('User cancelled the login flow');
-          Alert.alert('로그인 취소', '로그인이 취소되었습니다.');
-        } else if (result.type === 'dismiss') {
-          console.log('Auth session dismissed');
-          // dismiss 시에도 URL이 있을 수 있으므로 확인
-          if (result.url) {
-            console.log('Dismissed but URL present:', result.url);
-            // URL에 토큰이 있는지 확인
-            try {
-              const url = new URL(result.url);
-              const hashParams = new URLSearchParams(url.hash.substring(1));
-              const accessToken = hashParams.get('access_token') || url.searchParams.get('access_token');
-              
-              if (accessToken) {
-                console.log('Found token in dismissed result, processing...');
-                // 토큰이 있으면 처리
-                const { error: sessionError } = await supabase.auth.setSession({
-                  access_token: accessToken,
-                  refresh_token: hashParams.get('refresh_token') || url.searchParams.get('refresh_token') || '',
-                });
-
-                if (!sessionError) {
-                  await refreshAuth();
-                  router.replace('/(tabs)/feed');
-                  return;
-                }
-              } else {
-                // URL은 있지만 토큰이 없는 경우 - OAuth 플로우가 완료되지 않았을 수 있음
-                console.log('Dismissed with URL but no token found');
-                // 잠시 기다렸다가 인증 상태 확인
-                setTimeout(async () => {
-                  const { data: { session } } = await supabase.auth.getSession();
-                  if (session?.user) {
-                    console.log('Session found after dismiss, user:', session.user.email);
-                    await refreshAuth();
-                    router.replace('/(tabs)/feed');
-                  }
-                }, 1000);
-              }
-            } catch (e) {
-              console.error('Error processing dismissed URL:', e);
-            }
-          } else {
-            // URL도 없는 경우 - OAuth 플로우가 완료되지 않았을 수 있음
-            console.log('Dismissed without URL - OAuth flow may not have completed');
-            // 잠시 기다렸다가 인증 상태 확인
-            setTimeout(async () => {
-              const { data: { session } } = await supabase.auth.getSession();
-              if (session?.user) {
-                console.log('Session found after dismiss, user:', session.user.email);
-                await refreshAuth();
-                router.replace('/(tabs)/feed');
-              }
-            }, 1000);
-          }
+          setIsGoogleLoading(false);
         } else {
-          console.log('Unexpected result type:', result.type, result);
-          // 다른 타입도 URL이 있으면 처리 시도
-          if (result.url) {
-            console.log('Processing URL from unexpected result type:', result.url);
-          }
+          console.log('OAuth flow did not complete');
+          setIsGoogleLoading(false);
         }
       } else {
         console.error('No OAuth URL returned from Supabase');

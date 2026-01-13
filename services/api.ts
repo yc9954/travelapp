@@ -75,9 +75,11 @@ class ApiService {
   async getFeed(page: number = 1, limit: number = 10): Promise<Post[]> {
     if (USE_MOCK_API) {
       await delay(500);
+      // 사용자가 업로드한 게시물 불러오기
+      const userUploadedPosts = await StorageService.getUserPosts();
       // Travel 에셋과 일반 포스트를 합쳐서 반환
       const travelPosts = convertTravelAssetsToPosts();
-      return [...this.mockPosts, ...travelPosts];
+      return [...userUploadedPosts, ...this.mockPosts, ...travelPosts];
     }
     const response = await this.client.get<Post[]>('/posts/feed', {
       params: { page, limit },
@@ -88,8 +90,11 @@ class ApiService {
   async getUserPosts(userId: string): Promise<Post[]> {
     if (USE_MOCK_API) {
       await delay(500);
-      // 현재 로그인한 사용자의 게시물만 필터링
-      return this.mockPosts.filter(post => post.userId === userId);
+      // Storage에서 사용자가 업로드한 게시물 불러오기
+      const userUploadedPosts = await StorageService.getUserPosts();
+      // Mock 게시물과 합치기 (사용자가 업로드한 것을 우선 표시)
+      const mockUserPosts = this.mockPosts.filter(post => post.userId === userId);
+      return [...userUploadedPosts.filter(post => post.userId === userId), ...mockUserPosts];
     }
     const response = await this.client.get<Post[]>(`/posts/user/${userId}`);
     return response.data;
@@ -115,7 +120,15 @@ class ApiService {
         isLiked: false,
         createdAt: new Date().toISOString(),
       };
-      this.mockPosts.unshift(newPost); // 새 게시물을 맨 앞에 추가
+      this.mockPosts.unshift(newPost); // 피드용
+      await StorageService.addUserPost(newPost); // Storage에 저장하여 프로필에 표시
+
+      // 사용자 게시물 수 업데이트
+      if (userData) {
+        userData.postsCount = (userData.postsCount || 0) + 1;
+        await StorageService.saveUserData(userData);
+      }
+
       return newPost;
     }
     const response = await this.client.post<Post>('/posts', data);
