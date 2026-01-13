@@ -143,30 +143,30 @@ class ApiService {
 
   // ==================== Follows ====================
 
-  async followUser(userId: string): Promise<void> {
-    await SupabaseAPI.followUser(userId);
+  async followUser(userId: string, currentUserId: string): Promise<void> {
+    await SupabaseAPI.followUser(userId, currentUserId);
 
     // Update local user data
     const userData = await StorageService.getUserData();
-    if (userData) {
+    if (userData && userData.id === currentUserId) {
       userData.followingCount = (userData.followingCount || 0) + 1;
       await StorageService.saveUserData(userData);
     }
   }
 
-  async unfollowUser(userId: string): Promise<void> {
-    await SupabaseAPI.unfollowUser(userId);
+  async unfollowUser(userId: string, currentUserId: string): Promise<void> {
+    await SupabaseAPI.unfollowUser(userId, currentUserId);
 
     // Update local user data
     const userData = await StorageService.getUserData();
-    if (userData) {
+    if (userData && userData.id === currentUserId) {
       userData.followingCount = Math.max(0, (userData.followingCount || 1) - 1);
       await StorageService.saveUserData(userData);
     }
   }
 
-  async isFollowing(userId: string): Promise<boolean> {
-    return await SupabaseAPI.isFollowing(userId);
+  async isFollowing(userId: string, currentUserId: string): Promise<boolean> {
+    return await SupabaseAPI.isFollowing(userId, currentUserId);
   }
 
   async getFollowers(userId: string): Promise<User[]> {
