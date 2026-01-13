@@ -125,8 +125,8 @@ class ApiService {
 
   // ==================== Profile ====================
 
-  async getUserProfile(userId: string): Promise<User> {
-    return await SupabaseAPI.getProfile(userId);
+  async getUserProfile(userId: string, userMetadata?: any): Promise<User> {
+    return await SupabaseAPI.getProfile(userId, userMetadata);
   }
 
   async updateUserProfile(userId: string, updates: Partial<User>): Promise<User> {

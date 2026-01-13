@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { SupabaseAPI } from '../services/supabase-api';
 import { StorageService } from '../services/storage';
 import { supabase } from '../lib/supabase';
 import type { User, LoginRequest, RegisterRequest } from '../types';
@@ -28,15 +29,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Auth state changed:', event, session?.user?.email);
 
       if (event === 'SIGNED_IN' && session?.user) {
+        console.log('🔐 User signed in, loading profile...');
+        const profileStartTime = Date.now();
+
         // 로그인 성공 시 프로필 정보 가져오기
         const supabaseUser = session.user;
 
         try {
-          // Profile 테이블에서 실제 데이터 가져오기
-          const profile = await api.getUserProfile(supabaseUser.id);
+          // Profile 테이블에서 실제 데이터 가져오기 (사용자 정보를 전달해서 불필요한 getUser() 호출 방지)
+          const profile = await SupabaseAPI.getProfile(supabaseUser.id, supabaseUser);
           await StorageService.saveAuthToken(session.access_token);
           await StorageService.saveUserData(profile);
           setUser(profile);
+          console.log(`✅ Profile loaded in ${Date.now() - profileStartTime}ms`);
         } catch (error) {
           console.error('Failed to load profile on sign in:', error);
 
@@ -77,18 +82,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAuth = async () => {
     try {
+      console.log('🔍 Checking auth status...');
+      const checkStartTime = Date.now();
+
       // 먼저 Supabase 세션 확인 (AsyncStorage에서 자동 복원)
       const { data: { session }, error } = await supabase.auth.getSession();
+      console.log(`⏱️ Session check took ${Date.now() - checkStartTime}ms`);
 
       if (session?.user && !error) {
         console.log('✅ Supabase session found:', session.user.email);
+        const profileStartTime = Date.now();
 
-        // Profile 정보 가져오기 (팔로워/팔로잉 카운트 포함)
+        // Profile 정보 가져오기 (팔로워/팔로잉 카운트 포함, 세션 user 정보 전달)
         try {
-          const profile = await api.getUserProfile(session.user.id);
+          const profile = await SupabaseAPI.getProfile(session.user.id, session.user);
           await StorageService.saveAuthToken(session.access_token);
           await StorageService.saveUserData(profile);
           setUser(profile);
+          console.log(`✅ Profile loaded in checkAuth: ${Date.now() - profileStartTime}ms`);
           setIsLoading(false);
           return;
         } catch (profileError) {
@@ -136,6 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Auth check error:', error);
     } finally {
+      console.log(`⏱️ Total auth check took ${Date.now()}ms`);
       setIsLoading(false);
     }
   };
