@@ -407,4 +407,75 @@ export const SupabaseAPI = {
 
     if (error) throw error;
   },
+
+  // ==================== Follows ====================
+
+  async followUser(userId: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+    if (user.id === userId) throw new Error('Cannot follow yourself');
+
+    const { error } = await supabase
+      .from('follows')
+      .insert({
+        follower_id: user.id,
+        following_id: userId,
+      });
+
+    if (error) throw error;
+  },
+
+  async unfollowUser(userId: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { error } = await supabase
+      .from('follows')
+      .delete()
+      .eq('follower_id', user.id)
+      .eq('following_id', userId);
+
+    if (error) throw error;
+  },
+
+  async isFollowing(userId: string): Promise<boolean> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    const { data, error } = await supabase
+      .from('follows')
+      .select('id')
+      .eq('follower_id', user.id)
+      .eq('following_id', userId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows returned
+    return !!data;
+  },
+
+  async getFollowers(userId: string): Promise<User[]> {
+    const { data, error } = await supabase
+      .from('follows')
+      .select(`
+        follower:follower_id (*)
+      `)
+      .eq('following_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data.map(follow => convertProfile(follow.follower as any));
+  },
+
+  async getFollowing(userId: string): Promise<User[]> {
+    const { data, error } = await supabase
+      .from('follows')
+      .select(`
+        following:following_id (*)
+      `)
+      .eq('follower_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data.map(follow => convertProfile(follow.following as any));
+  },
 };

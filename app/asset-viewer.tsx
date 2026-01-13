@@ -276,13 +276,17 @@ export default function AssetViewerScreen() {
 
   const renderComment = ({ item }: { item: Comment }) => (
     <View style={styles.commentItem}>
-      <Image
-        source={{ uri: item.user.profileImage || 'https://cdn-luma.com/public/avatars/avatar-default.jpg' }}
-        style={styles.commentAvatar}
-      />
+      <TouchableOpacity onPress={() => router.push(`/user/${item.user.id}`)}>
+        <Image
+          source={{ uri: item.user.profileImage || 'https://cdn-luma.com/public/avatars/avatar-default.jpg' }}
+          style={styles.commentAvatar}
+        />
+      </TouchableOpacity>
       <View style={styles.commentContent}>
         <View style={styles.commentHeader}>
-          <Text style={styles.commentUsername}>{item.user.username}</Text>
+          <TouchableOpacity onPress={() => router.push(`/user/${item.user.id}`)}>
+            <Text style={styles.commentUsername}>{item.user.username}</Text>
+          </TouchableOpacity>
           <Text style={styles.commentTime}>
             {new Date(item.createdAt).toLocaleDateString('ko-KR', {
               month: 'short',
@@ -335,9 +339,15 @@ export default function AssetViewerScreen() {
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </View>
         </TouchableOpacity>
-        <Text style={styles.headerUsername} numberOfLines={1}>
-          {post.user.username}
-        </Text>
+        <TouchableOpacity
+          style={{ flex: 1 }}
+          onPress={() => router.push(`/user/${post.user.id}`)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.headerUsername} numberOfLines={1}>
+            {post.user.username}
+          </Text>
+        </TouchableOpacity>
         <View style={styles.headerPlaceholder} />
       </SafeAreaView>
 
@@ -375,7 +385,12 @@ export default function AssetViewerScreen() {
 
           {/* 캡션 */}
           <View style={styles.captionOverlay}>
-            <Text style={styles.captionUsernameOverlay}>{post.user.username}</Text>
+            <TouchableOpacity
+              onPress={() => router.push(`/user/${post.user.id}`)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.captionUsernameOverlay}>{post.user.username}</Text>
+            </TouchableOpacity>
             <Text style={styles.captionTextOverlay} numberOfLines={2}>
               {post.caption}
             </Text>

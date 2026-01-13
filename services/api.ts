@@ -141,6 +141,42 @@ class ApiService {
     return profile;
   }
 
+  // ==================== Follows ====================
+
+  async followUser(userId: string): Promise<void> {
+    await SupabaseAPI.followUser(userId);
+
+    // Update local user data
+    const userData = await StorageService.getUserData();
+    if (userData) {
+      userData.followingCount = (userData.followingCount || 0) + 1;
+      await StorageService.saveUserData(userData);
+    }
+  }
+
+  async unfollowUser(userId: string): Promise<void> {
+    await SupabaseAPI.unfollowUser(userId);
+
+    // Update local user data
+    const userData = await StorageService.getUserData();
+    if (userData) {
+      userData.followingCount = Math.max(0, (userData.followingCount || 1) - 1);
+      await StorageService.saveUserData(userData);
+    }
+  }
+
+  async isFollowing(userId: string): Promise<boolean> {
+    return await SupabaseAPI.isFollowing(userId);
+  }
+
+  async getFollowers(userId: string): Promise<User[]> {
+    return await SupabaseAPI.getFollowers(userId);
+  }
+
+  async getFollowing(userId: string): Promise<User[]> {
+    return await SupabaseAPI.getFollowing(userId);
+  }
+
   // ==================== Upload ====================
 
   async uploadImage(uri: string): Promise<string> {

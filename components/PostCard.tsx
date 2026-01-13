@@ -8,16 +8,21 @@ interface PostCardProps {
   onLike: (postId: string) => void;
   onComment: (postId: string) => void;
   onViewPost: (postId: string) => void;
+  onUserPress?: (userId: string) => void;
 }
 
-export function PostCard({ post, onLike, onComment, onViewPost }: PostCardProps) {
+export function PostCard({ post, onLike, onComment, onViewPost, onUserPress }: PostCardProps) {
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.userInfo}>
+        <TouchableOpacity
+          style={styles.userInfo}
+          onPress={() => onUserPress?.(post.user.id)}
+          activeOpacity={onUserPress ? 0.7 : 1}
+        >
           <Image
             source={{ uri: post.user.profileImage || 'https://cdn-luma.com/public/avatars/avatar-default.jpg' }}
             style={styles.avatar}
@@ -28,7 +33,7 @@ export function PostCard({ post, onLike, onComment, onViewPost }: PostCardProps)
               <Text style={styles.location}>{post.location}</Text>
             )}
           </View>
-        </View>
+        </TouchableOpacity>
       </View>
 
       <TouchableOpacity activeOpacity={0.9} onPress={() => onViewPost(post.id)}>
@@ -94,7 +99,12 @@ export function PostCard({ post, onLike, onComment, onViewPost }: PostCardProps)
       <View style={styles.content}>
         <Text style={styles.likes}>{post.likesCount.toLocaleString()}개의 좋아요</Text>
         <View style={styles.caption}>
-          <Text style={styles.username}>{post.user.username}</Text>
+          <TouchableOpacity
+            onPress={() => onUserPress?.(post.user.id)}
+            activeOpacity={onUserPress ? 0.7 : 1}
+          >
+            <Text style={styles.username}>{post.user.username}</Text>
+          </TouchableOpacity>
           <Text style={styles.captionText}> {post.caption}</Text>
         </View>
         {post.hashtags.length > 0 && (

@@ -11,27 +11,45 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
-import type { Post } from '../../types';
+import type { Post, User } from '../../types';
 
-export default function ProfileScreen() {
-  const { user, logout } = useAuth();
+export default function UserProfileScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { user: currentUser } = useAuth();
+  const [user, setUser] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    if (id) {
+      loadUserProfile();
       loadUserPosts();
+      checkFollowStatus();
     }
-  }, [user]);
+  }, [id]);
 
-  const loadUserPosts = async () => {
-    if (!user) return;
+  const loadUserProfile = async () => {
+    if (!id) return;
 
     try {
-      const data = await api.getUserPosts(user.id);
+      const userData = await api.getUserProfile(id);
+      setUser(userData);
+    } catch (error) {
+      console.error('Failed to load user profile:', error);
+      Alert.alert('오류', '사용자 프로필을 불러올 수 없습니다.');
+    }
+  };
+
+  const loadUserPosts = async () => {
+    if (!id) return;
+
+    try {
+      const data = await api.getUserPosts(id);
       setPosts(data);
     } catch (error) {
       console.error('Failed to load user posts:', error);
@@ -40,42 +58,98 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleLogout = () => {
-    Alert.alert(
-      '로그아웃',
-      '정말 로그아웃하시겠습니까?',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '로그아웃',
-          style: 'destructive',
-          onPress: async () => {
-            await logout();
-            router.replace('/(auth)/login');
-          },
-        },
-      ]
-    );
+  const checkFollowStatus = async () => {
+    if (!id) return;
+
+    try {
+      const following = await api.isFollowing(id);
+      setIsFollowing(following);
+    } catch (error) {
+      console.error('Failed to check follow status:', error);
+    }
+  };
+
+  const handleFollowToggle = async () => {
+    if (!id || !user) return;
+
+    setIsFollowLoading(true);
+    try {
+      if (isFollowing) {
+        await api.unfollowUser(id);
+        setIsFollowing(false);
+        setUser({ ...user, followersCount: user.followersCount - 1 });
+      } else {
+        await api.followUser(id);
+        setIsFollowing(true);
+        setUser({ ...user, followersCount: user.followersCount + 1 });
+      }
+    } catch (error: any) {
+      console.error('Failed to toggle follow:', error);
+      Alert.alert('오류', error.message || '팔로우 처리 중 오류가 발생했습니다.');
+    } finally {
+      setIsFollowLoading(false);
+    }
+  };
+
+  const handleFollowersPress = () => {
+    if (id) {
+      router.push(`/user/${id}/followers`);
+    }
+  };
+
+  const handleFollowingPress = () => {
+    if (id) {
+      router.push(`/user/${id}/following`);
+    }
   };
 
   const renderPost = ({ item }: { item: Post }) => (
-    <View style={styles.gridItem}>
+    <TouchableOpacity
+      style={styles.gridItem}
+      onPress={() => router.push({
+        pathname: '/asset-viewer',
+        params: { postId: item.id }
+      })}
+    >
       <Image
         source={{ uri: item.imageUrl }}
         style={styles.gridImage}
       />
-    </View>
+      {item.is3D && (
+        <View style={styles.gridBadge}>
+          <Text style={styles.gridBadgeText}>3D</Text>
+        </View>
+      )}
+    </TouchableOpacity>
   );
 
-  if (!user) return null;
+  const isOwnProfile = currentUser?.id === id;
+
+  if (isLoading || !user) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#1F2937" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>프로필</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color="#1F2937" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <TouchableOpacity onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={24} color="#6B7280" />
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#1F2937" />
         </TouchableOpacity>
+        <Text style={styles.headerTitle}>{user.username}</Text>
+        <View style={{ width: 24 }} />
       </View>
 
       <FlatList
@@ -97,49 +171,51 @@ export default function ProfileScreen() {
                 <Text style={styles.statNumber}>{user.postsCount}</Text>
                 <Text style={styles.statLabel}>게시물</Text>
               </View>
-              <TouchableOpacity
-                style={styles.stat}
-                onPress={() => router.push(`/user/${user.id}/followers`)}
-              >
+              <TouchableOpacity style={styles.stat} onPress={handleFollowersPress}>
                 <Text style={styles.statNumber}>{user.followersCount}</Text>
                 <Text style={styles.statLabel}>팔로워</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.stat}
-                onPress={() => router.push(`/user/${user.id}/following`)}
-              >
+              <TouchableOpacity style={styles.stat} onPress={handleFollowingPress}>
                 <Text style={styles.statNumber}>{user.followingCount}</Text>
                 <Text style={styles.statLabel}>팔로잉</Text>
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.editButton}>
-              <Text style={styles.editButtonText}>프로필 편집</Text>
-            </TouchableOpacity>
+            {!isOwnProfile && (
+              <TouchableOpacity
+                style={[
+                  styles.followButton,
+                  isFollowing && styles.followingButton,
+                ]}
+                onPress={handleFollowToggle}
+                disabled={isFollowLoading}
+              >
+                {isFollowLoading ? (
+                  <ActivityIndicator size="small" color={isFollowing ? "#1F2937" : "#FFFFFF"} />
+                ) : (
+                  <Text
+                    style={[
+                      styles.followButtonText,
+                      isFollowing && styles.followingButtonText,
+                    ]}
+                  >
+                    {isFollowing ? '팔로잉' : '팔로우'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            )}
 
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>내 게시물</Text>
+              <Text style={styles.sectionTitle}>게시물</Text>
             </View>
           </View>
         }
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
-          isLoading ? (
-            <View style={styles.centerContainer}>
-              <ActivityIndicator size="large" color="#1F2937" />
-            </View>
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="images-outline" size={64} color="#D1D5DB" />
-              <Text style={styles.emptyText}>아직 게시물이 없습니다</Text>
-              <TouchableOpacity
-                style={styles.uploadButton}
-                onPress={() => router.push('/(tabs)/upload')}
-              >
-                <Text style={styles.uploadButtonText}>첫 게시물 올리기</Text>
-              </TouchableOpacity>
-            </View>
-          )
+          <View style={styles.emptyContainer}>
+            <Ionicons name="images-outline" size={64} color="#D1D5DB" />
+            <Text style={styles.emptyText}>아직 게시물이 없습니다</Text>
+          </View>
         }
       />
     </SafeAreaView>
@@ -162,10 +238,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '600',
     color: '#1F2937',
-    letterSpacing: -0.5,
   },
   profileHeader: {
     backgroundColor: '#FFFFFF',
@@ -220,18 +295,26 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontWeight: '500',
   },
-  editButton: {
-    backgroundColor: '#F9FAFB',
-    paddingHorizontal: 32,
+  followButton: {
+    backgroundColor: '#1F2937',
+    paddingHorizontal: 48,
     paddingVertical: 12,
     borderRadius: 10,
     marginBottom: 32,
+    minWidth: 120,
+    alignItems: 'center',
+  },
+  followingButton: {
+    backgroundColor: '#F9FAFB',
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
-  editButtonText: {
+  followButtonText: {
     fontSize: 15,
     fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  followingButtonText: {
     color: '#1F2937',
   },
   sectionHeader: {
@@ -294,23 +377,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6B7280',
     marginTop: 16,
-    marginBottom: 24,
     fontWeight: '500',
-  },
-  uploadButton: {
-    backgroundColor: '#1F2937',
-    paddingHorizontal: 28,
-    paddingVertical: 14,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  uploadButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
