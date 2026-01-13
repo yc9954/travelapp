@@ -108,27 +108,42 @@ export const SupabaseAPI = {
 
   // ==================== Profile ====================
 
-  async getProfile(userId: string): Promise<User> {
+  async getProfile(userId: string, userMetadata?: any): Promise<User> {
+    console.log('📋 Getting profile for user:', userId);
+    const startTime = Date.now();
+
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .single();
 
+    console.log(`⏱️ Profile query took ${Date.now() - startTime}ms`);
+
     // Profile이 존재하면 반환
     if (!error && data) {
+      console.log('✅ Profile found');
       return convertProfile(data);
     }
 
     // PGRST116: 프로필이 없는 경우 (0 rows)
     if (error && error.code === 'PGRST116') {
       console.log('⚠️ Profile not found, creating new profile for user:', userId);
+      const createStartTime = Date.now();
 
-      // 현재 사용자 정보 가져오기
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      // userMetadata가 제공되면 사용, 아니면 현재 사용자 정보 가져오기
+      let user = userMetadata;
+      if (!user) {
+        console.log('🔍 Fetching user metadata...');
+        const { data: { user: fetchedUser }, error: userError } = await supabase.auth.getUser();
 
-      if (userError || !user) {
-        throw new Error('Cannot create profile: User not authenticated');
+        if (userError || !fetchedUser) {
+          throw new Error('Cannot create profile: User not authenticated');
+        }
+        user = fetchedUser;
+        console.log(`⏱️ User fetch took ${Date.now() - createStartTime}ms`);
+      } else {
+        console.log('✅ Using provided user metadata');
       }
 
       // 새 프로필 생성
@@ -138,6 +153,7 @@ export const SupabaseAPI = {
         || user.email?.split('@')[0]
         || 'user';
 
+      const insertStartTime = Date.now();
       const { data: newProfile, error: createError } = await supabase
         .from('profiles')
         .insert({
@@ -153,12 +169,14 @@ export const SupabaseAPI = {
         .select()
         .single();
 
+      console.log(`⏱️ Profile insert took ${Date.now() - insertStartTime}ms`);
+
       if (createError) {
         console.error('Failed to create profile:', createError);
         throw createError;
       }
 
-      console.log('✅ Profile created successfully');
+      console.log(`✅ Profile created successfully in ${Date.now() - createStartTime}ms`);
       return convertProfile(newProfile);
     }
 
