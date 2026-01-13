@@ -41,23 +41,45 @@
 
 이 스크립트는 다음을 생성합니다:
 - 🧑‍💼 3명의 데모 사용자 (traveler123, worldexplorer, photographer)
-- 📸 8개의 샘플 게시물 (알프스, 성운, 지구본, 민들레 등)
+- 📸 14개의 샘플 게시물 (도시, 자연, 건축, 인테리어, 예술 등 다양한 콘텐츠)
 - ❤️ 초기 좋아요 및 💬 댓글
 
 **이 단계를 건너뛰면 앱을 실행할 때 피드가 비어있습니다!**
 
-## 3. 환경 변수 설정
+## 3. 환경 변수 설정 ⭐ 필수!
+
+이 단계를 건너뛰면 "Invalid API key" 오류가 발생합니다!
+
+### 3.1 Supabase API 키 복사
 
 1. Supabase 프로젝트 대시보드에서 **Settings** > **API** 이동
-2. 다음 값들을 복사:
-   - `Project URL`
-   - `anon public` key
+2. 다음 두 값을 복사:
+   - **Project URL** (예: `https://abcdefghijklmnop.supabase.co`)
+   - **Project API keys** → **anon public** key (긴 문자열)
 
-3. 프로젝트 루트에 `.env` 파일 생성:
+### 3.2 .env 파일 생성
+
+1. 프로젝트 루트 디렉토리에 `.env` 파일 생성
+2. 다음 내용을 붙여넣고 **실제 값으로 교체**:
 
 ```env
-EXPO_PUBLIC_SUPABASE_URL=your_project_url_here
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+EXPO_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+⚠️ **중요**:
+- `.env.example` 파일이 아닌 `.env` 파일을 생성하세요
+- `your-project-id`와 키 값을 **반드시** 실제 값으로 교체하세요
+- `.env` 파일은 Git에 커밋하지 마세요 (이미 .gitignore에 포함됨)
+
+### 3.3 앱 재시작
+
+환경 변수 변경 후 **반드시** 앱을 재시작하세요:
+
+```bash
+# 개발 서버 중지 (Ctrl+C)
+# 캐시 클리어 후 재시작
+expo start --clear
 ```
 
 ## 4. Google OAuth 설정 (선택사항)
@@ -119,20 +141,45 @@ Google 로그인을 사용하려면:
 
 ## 문제 해결
 
-### 데이터가 보이지 않음
+### ❌ "Invalid API key" 오류
 
-- SQL Editor에서 `SELECT * FROM profiles;` 실행하여 데이터 확인
+**원인**: `.env` 파일이 없거나 환경 변수가 잘못 설정됨
+
+**해결 방법**:
+1. 프로젝트 루트에 `.env` 파일이 있는지 확인
+2. 파일 내용 확인:
+   ```bash
+   cat .env
+   ```
+3. `EXPO_PUBLIC_SUPABASE_URL`과 `EXPO_PUBLIC_SUPABASE_ANON_KEY`가 실제 값으로 설정되어 있는지 확인
+4. Supabase 대시보드에서 API 키가 올바른지 재확인
+5. 앱을 **반드시 재시작**:
+   ```bash
+   expo start --clear
+   ```
+
+### ❌ 데이터가 보이지 않음 (빈 피드)
+
+**원인**: Seed data를 실행하지 않음
+
+**해결 방법**:
+- Supabase SQL Editor에서 `002_seed_data.sql` 실행
+- 데이터 확인: `SELECT * FROM posts;` 실행
 - RLS 정책이 올바르게 설정되었는지 확인
 
-### 인증 에러
+### ❌ 인증 에러
 
+**해결 방법**:
 - `.env` 파일의 환경 변수가 올바른지 확인
+- Supabase 대시보드에서 이메일 확인 설정 확인 (개발 중에는 OFF)
 - 앱을 재시작: `expo start --clear`
 
-### 권한 에러
+### ❌ 권한 에러
 
-- RLS 정책 확인
+**해결 방법**:
+- RLS 정책 확인 (`001_initial_schema.sql` 실행했는지)
 - 사용자가 로그인되어 있는지 확인
+- Supabase 대시보드 > Authentication에서 사용자 확인
 
 ## 추가 리소스
 
