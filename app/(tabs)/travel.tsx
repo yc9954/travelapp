@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { TravelAIChatModal } from '../../components/TravelAIChatModal';
 import { travelAssets, type TravelAsset } from '../../services/mockData';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -25,6 +26,7 @@ export default function TravelScreen() {
   const [viewerLoading, setViewerLoading] = useState(true);
   const [viewerError, setViewerError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showAIChat, setShowAIChat] = useState(false);
   const webViewRef = useRef<WebView>(null);
 
   const getMapHTML = () => {
@@ -560,10 +562,18 @@ export default function TravelScreen() {
         </View>
       )}
 
-      {/* Current Location Button */}
+      {/* AI Chat Button - 좌측 하단 */}
+      <TouchableOpacity style={styles.aiButton} onPress={() => setShowAIChat(true)}>
+        <Ionicons name="sparkles" size={20} color="#60A5FA" />
+      </TouchableOpacity>
+
+      {/* Current Location Button - 우측 하단 */}
       <TouchableOpacity style={styles.locationButton} onPress={handleCenterMap}>
         <Ionicons name="locate" size={24} color="#1F2937" />
       </TouchableOpacity>
+
+      {/* AI Chat Modal */}
+      <TravelAIChatModal visible={showAIChat} onClose={() => setShowAIChat(false)} />
 
       {/* Asset 3D Viewer Modal */}
       <Modal
@@ -663,12 +673,31 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     padding: 4,
   },
+  aiButton: {
+    position: 'absolute',
+    bottom: 80,
+    right: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 0.5,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    zIndex: 1001,
+  },
   locationButton: {
     position: 'absolute',
     bottom: 20,
     right: 20,
-    width: 52,
-    height: 52,
+    width: 48,
+    height: 48,
     borderRadius: 26,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
