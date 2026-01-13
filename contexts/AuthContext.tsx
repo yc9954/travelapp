@@ -11,6 +11,7 @@ interface AuthContextType {
   login: (data: LoginRequest) => Promise<void>;
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
+  refreshAuth: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,6 +22,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     checkAuth();
+
+    // Supabase 인증 상태 변경 리스너 설정
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session?.user?.email);
+      
+      if (event === 'SIGNED_IN' && session?.user) {
+        // 로그인 성공 시 사용자 정보 업데이트
+        const supabaseUser = session.user;
+        const convertedUser: User = {
+          id: supabaseUser.id,
+          email: supabaseUser.email || '',
+          username: supabaseUser.user_metadata?.username || supabaseUser.email?.split('@')[0] || 'user',
+          profileImage: supabaseUser.user_metadata?.avatar_url || supabaseUser.user_metadata?.picture,
+          bio: supabaseUser.user_metadata?.bio || '',
+          followersCount: 0,
+          followingCount: 0,
+          postsCount: 0,
+          createdAt: supabaseUser.created_at || new Date().toISOString(),
+        };
+
+        await StorageService.saveAuthToken(session.access_token);
+        await StorageService.saveUserData(convertedUser);
+        setUser(convertedUser);
+      } else if (event === 'SIGNED_OUT') {
+        // 로그아웃 시 상태 초기화
+        await StorageService.clearAll();
+        setUser(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const checkAuth = async () => {
@@ -91,11 +125,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      await supabase.auth.signOut();
       await StorageService.clearAll();
       setUser(null);
     } catch (error) {
       console.error('Logout error:', error);
     }
+  };
+
+  const refreshAuth = async () => {
+    await checkAuth();
   };
 
   return (
@@ -107,6 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         register,
         logout,
+        refreshAuth,
       }}
     >
       {children}
