@@ -14,6 +14,8 @@
 
 프로젝트가 생성되면:
 
+### 2.1 스키마 생성
+
 1. 왼쪽 메뉴에서 **SQL Editor** 클릭
 2. **New Query** 클릭
 3. `supabase/migrations/001_initial_schema.sql` 파일의 내용을 복사
@@ -27,6 +29,22 @@
 - `comments` 테이블 (댓글)
 - Row Level Security 정책
 - 자동 카운트 업데이트 트리거
+
+### 2.2 초기 데이터 삽입 (Seed Data) ⭐ 중요!
+
+스키마 생성 후, **반드시** 기본 더미 데이터를 추가하세요:
+
+1. **SQL Editor**에서 **New Query** 클릭
+2. `supabase/migrations/002_seed_data.sql` 파일의 내용을 복사
+3. SQL Editor에 붙여넣기
+4. **Run** 버튼 클릭하여 실행
+
+이 스크립트는 다음을 생성합니다:
+- 🧑‍💼 3명의 데모 사용자 (traveler123, worldexplorer, photographer)
+- 📸 8개의 샘플 게시물 (알프스, 성운, 지구본, 민들레 등)
+- ❤️ 초기 좋아요 및 💬 댓글
+
+**이 단계를 건너뛰면 앱을 실행할 때 피드가 비어있습니다!**
 
 ## 3. 환경 변수 설정
 
