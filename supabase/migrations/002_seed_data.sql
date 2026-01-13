@@ -347,7 +347,7 @@ VALUES
   (
     '550e8400-e29b-41d4-a716-446655440025',
     '550e8400-e29b-41d4-a716-446655440002',
-    'https://cdn-luma.com/05c3390b981e9642505f719e1e873a4a9e7f277c6882dbad1dad17e285563f2a/Highcliffe_Castle_Video_thumb.jpg',
+    'https://uvyttgmfepjyiglggmgz.supabase.co/storage/v1/object/public/post-images/KakaoTalk_Photo_2026-01-13-19-32-00.png',
     'https://lumalabs.ai/capture/4da7cf32-865a-4515-8cb9-9dfc574c90c2',
     true,
     '스위스 알프스의 아름다운 설경! 360도 파노라마로 즐겨보세요 🏔️✨',
@@ -359,7 +359,7 @@ VALUES
   (
     '550e8400-e29b-41d4-a716-446655440026',
     '550e8400-e29b-41d4-a716-446655440003',
-    'https://cdn-luma.com/76c1aafa17eb1377ff6cc9b8a246d58181a316bb0e33592dd1f657aaa0448ecd/Nebula_Gaussian_Splatting_thumb.jpg',
+    'https://uvyttgmfepjyiglggmgz.supabase.co/storage/v1/object/public/post-images/KakaoTalk_Photo_2026-01-13-19-26-25.png',
     'https://lumalabs.ai/capture/b86b7928-f130-40a5-8cac-8095f30eed54',
     true,
     '성운 가우시안 스플래팅 💙 환상적인 우주 공간을 3D로!',
@@ -407,7 +407,7 @@ VALUES
   (
     '550e8400-e29b-41d4-a716-446655440030',
     '550e8400-e29b-41d4-a716-446655440003',
-    'https://cdn-luma.com/285dad34964ab19970fffa5f9b352a1ce5f5c1c7f730ff5bda2ce50f27dd0619/Moses_by_Nitzan_Avidor_thumb.jpg',
+    'https://uvyttgmfepjyiglggmgz.supabase.co/storage/v1/object/public/post-images/KakaoTalk_Photo_2026-01-13-19-26-25.png',
     'https://lumalabs.ai/capture/b86b7928-f130-40a5-8cac-8095f30eed54',
     true,
     '성운 가우시안 스플래팅 비주얼 ✨ 환상적인 우주 공간',
@@ -419,7 +419,7 @@ VALUES
   (
     '550e8400-e29b-41d4-a716-446655440031',
     '550e8400-e29b-41d4-a716-446655440001',
-    'https://cdn-luma.com/987a90166b489fddab714f548f5b2fb6558cd7f102c5021913fc4289f75a013b/Former_U_S_National_Bank_thumb.jpg',
+    'https://uvyttgmfepjyiglggmgz.supabase.co/storage/v1/object/public/post-images/KakaoTalk_Photo_2026-01-13-19-32-00.png',
     'https://lumalabs.ai/capture/4da7cf32-865a-4515-8cb9-9dfc574c90c2',
     true,
     '알프스 산맥의 겨울 풍경 ❄️ 눈 덮인 산들의 장관',
