@@ -12,9 +12,10 @@ interface FullScreenPostCardProps {
   onLike: (postId: string) => void;
   onComment: (postId: string) => void;
   onViewDetails: (postId: string) => void;
+  onUserPress?: (userId: string) => void;
 }
 
-export function FullScreenPostCard({ post, onLike, onComment, onViewDetails }: FullScreenPostCardProps) {
+export function FullScreenPostCard({ post, onLike, onComment, onViewDetails, onUserPress }: FullScreenPostCardProps) {
   const webViewRef = useRef<WebView>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -178,7 +179,11 @@ export function FullScreenPostCard({ post, onLike, onComment, onViewDetails }: F
         style={styles.topGradient}
       >
         <View style={styles.topInfo}>
-          <TouchableOpacity style={styles.userInfoButton}>
+          <TouchableOpacity
+            style={styles.userInfoButton}
+            onPress={() => onUserPress?.(post.user.id)}
+            activeOpacity={onUserPress ? 0.7 : 1}
+          >
             <Text style={styles.username}>@{post.user.username}</Text>
             {post.location && (
               <View style={styles.locationBadge}>
