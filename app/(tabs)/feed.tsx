@@ -133,7 +133,7 @@ export default function FeedScreen() {
           <Text style={styles.sectionTitle}>Featured Scenes</Text>
 
           <View style={styles.grid}>
-            {posts.map((item) => (
+            {posts.slice(1).map((item) => (
               <GridItem
                 key={item.id}
                 item={item}
