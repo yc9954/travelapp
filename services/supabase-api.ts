@@ -122,8 +122,18 @@ export const SupabaseAPI = {
 
     // Profile이 존재하면 반환
     if (!error && data) {
-      console.log('✅ Profile found');
+      console.log('✅ Profile found:', data.username);
       return convertProfile(data);
+    }
+
+    // 에러가 있으면 상세 로깅
+    if (error) {
+      console.error('❌ Profile query error:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      });
     }
 
     // PGRST116: 프로필이 없는 경우 (0 rows)
@@ -131,27 +141,28 @@ export const SupabaseAPI = {
       // 트리거가 프로필을 생성하는 동안 짧은 지연 후 재시도 (최대 3번)
       if (retryCount < 3) {
         const delay = 300 * (retryCount + 1); // 300ms, 600ms, 900ms
-        console.log(`⚠️ Profile not found, waiting ${delay}ms for trigger to create profile...`);
+        console.log(`⚠️ Profile not found (retry ${retryCount + 1}/3), waiting ${delay}ms for trigger to create profile...`);
         await new Promise(resolve => setTimeout(resolve, delay));
         return this.getProfile(userId, userMetadata, retryCount + 1);
       }
 
       // 재시도 후에도 프로필이 없으면 에러
-      console.error('❌ Profile not found after retries. Trigger may have failed.');
+      console.error('❌ Profile not found after 3 retries. Trigger may have failed or not been applied.');
+      console.error('💡 Please run the trigger SQL in Supabase Dashboard');
       throw new Error(
         '프로필을 불러올 수 없습니다.\n\n' +
-        '회원가입이 완료되지 않았을 수 있습니다. 다시 로그인해주세요.'
+        'Supabase Dashboard에서 트리거 SQL을 실행해주세요.'
       );
     }
 
     // 네트워크 에러 감지
-    const isNetworkError = error.message?.includes('Network request failed') ||
-                          error.message?.includes('fetch failed') ||
-                          error.message?.includes('network') ||
-                          !error.code;
+    const isNetworkError = error?.message?.includes('Network request failed') ||
+                          error?.message?.includes('fetch failed') ||
+                          error?.message?.includes('network') ||
+                          !error?.code;
 
     if (isNetworkError) {
-      console.error('🌐 네트워크 연결 오류 (getProfile):', error.message);
+      console.error('🌐 네트워크 연결 오류 (getProfile):', error?.message);
       throw new Error(
         '프로필을 불러오는 중 네트워크 연결에 실패했습니다.\n\n' +
         '확인 사항:\n' +
@@ -162,7 +173,8 @@ export const SupabaseAPI = {
     }
 
     // 다른 에러는 그대로 throw
-    throw error;
+    console.error('❌ Unknown profile error:', error);
+    throw error || new Error('Unknown error while fetching profile');
   },
 
   async updateProfile(userId: string, updates: Partial<User>) {
