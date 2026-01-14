@@ -17,13 +17,17 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { lumaGalleryAssets } from '../../services/mockData';
+import { kiriService } from '../../services/kiri';
+import { useAuth } from '../../contexts/AuthContext';
 
 const { width } = Dimensions.get('window');
 const GRID_ITEM_SIZE = (width - 48) / 3;
 
 export default function UploadScreen() {
+  const { user } = useAuth();
   const [showLumaGallery, setShowLumaGallery] = useState(false);
   const [selectedLumaAsset, setSelectedLumaAsset] = useState<typeof lumaGalleryAssets[0] | null>(null);
+  const [isProcessingVideo, setIsProcessingVideo] = useState(false);
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -73,6 +77,72 @@ export default function UploadScreen() {
           isLuma: 'false',
         },
       });
+    }
+  };
+
+  const recordVideo = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Camera access is required to record videos.');
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['videos'],
+        allowsEditing: false,
+        quality: 0.8,
+        videoMaxDuration: 180, // 3 minutes max (KIRI Engine limit)
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const videoUri = result.assets[0].uri;
+        
+        // Validate video
+        if (result.assets[0].duration && result.assets[0].duration > 180) {
+          Alert.alert('Video Too Long', 'Video must be 3 minutes or less.');
+          return;
+        }
+
+        setIsProcessingVideo(true);
+        
+        try {
+          // Optional: Set webhook URL if you have a backend server
+          // const webhookUrl = 'https://your-backend.com/api/webhooks/kiri';
+          
+          // Upload video to KIRI Engine
+          // If user is logged in, task will be saved to Supabase and webhook will be set up automatically
+          const uploadResponse = await kiriService.uploadVideo({
+            videoFile: videoUri,
+            modelQuality: 0, // High quality
+            textureQuality: 0, // 4K
+            fileFormat: 'glb', // GLB format for web viewing
+            isMask: 1, // Enable auto object masking
+            textureSmoothing: 1, // Enable texture smoothing
+          }, user?.id);
+
+          // Navigate to processing screen
+          router.push({
+            pathname: '/kiri-processing',
+            params: {
+              serialize: uploadResponse.data.serialize,
+              videoUri: videoUri,
+            },
+          });
+        } catch (error: any) {
+          console.error('KIRI upload error:', error);
+          Alert.alert(
+            'Upload Failed',
+            error.message || 'Failed to upload video to KIRI Engine. Please check your API key and try again.'
+          );
+        } finally {
+          setIsProcessingVideo(false);
+        }
+      }
+    } catch (error: any) {
+      console.error('Video recording error:', error);
+      Alert.alert('Error', 'Failed to record video. Please try again.');
     }
   };
 
@@ -172,7 +242,11 @@ export default function UploadScreen() {
               <Text style={styles.optionTitle}>Luma</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.optionCard} onPress={takePhoto}>
+            <TouchableOpacity 
+              style={styles.optionCard} 
+              onPress={takePhoto}
+              disabled={isProcessingVideo}
+            >
               <View style={styles.optionIconContainer}>
                 <Ionicons name="camera" size={32} color="#1F2937" />
               </View>
@@ -188,9 +262,31 @@ export default function UploadScreen() {
           </View>
         </View>
 
-        {/* Luma features introduction */}
+        {/* Edit Features */}
         <View style={styles.featuresSection}>
           <Text style={styles.featuresTitle}>Edit Features</Text>
+
+          <TouchableOpacity
+            style={[styles.featureCard, isProcessingVideo && styles.featureCardDisabled]}
+            onPress={recordVideo}
+            disabled={isProcessingVideo}
+          >
+            <View style={styles.featureIcon}>
+              {isProcessingVideo ? (
+                <ActivityIndicator size="small" color="#1F2937" />
+              ) : (
+                <Ionicons name="videocam-outline" size={24} color="#1F2937" />
+              )}
+            </View>
+            <View style={styles.featureContent}>
+              <Text style={styles.featureTitle}>
+                {isProcessingVideo ? 'Processing Video...' : 'Record Video'}
+              </Text>
+              <Text style={styles.featureDescription}>
+                Create 3D Gaussian Splatting from video (up to 3 min)
+              </Text>
+            </View>
+          </TouchableOpacity>
 
           <View style={styles.featureCard}>
             <View style={styles.featureIcon}>
@@ -295,10 +391,9 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E5E7EB',
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: 'bold',
     color: '#1F2937',
-    letterSpacing: -0.5,
   },
   content: {
     flex: 1,
@@ -308,26 +403,31 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   mainOptions: {
-    marginBottom: 32,
+    marginBottom: 40,
   },
   optionsGrid: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
     justifyContent: 'space-between',
   },
   optionCard: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 24,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 0.5,
     borderColor: '#E5E7EB',
-    minHeight: 120,
+    minHeight: 110,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02,
+    shadowRadius: 2,
+    elevation: 1,
   },
   optionIconContainer: {
-    marginBottom: 10,
+    marginBottom: 8,
   },
   optionTitle: {
     fontSize: 15,
@@ -337,38 +437,38 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   featuresSection: {
-    marginBottom: 32,
+    marginBottom: 40,
   },
   featuresTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: '#1F2937',
-    marginBottom: 20,
+    marginBottom: 16,
     letterSpacing: -0.3,
   },
   featureCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 18,
-    marginBottom: 12,
-    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 10,
+    borderWidth: 0.5,
     borderColor: '#E5E7EB',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 3,
+    shadowOpacity: 0.02,
+    shadowRadius: 2,
     elevation: 1,
   },
   featureIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#F3F4F6',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F9FAFB',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 14,
   },
   featureContent: {
     flex: 1,
@@ -384,6 +484,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     lineHeight: 20,
+  },
+  featureCardDisabled: {
+    opacity: 0.6,
   },
   modalContainer: {
     flex: 1,

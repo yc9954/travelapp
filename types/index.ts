@@ -83,3 +83,30 @@ export interface LumaConvertResponse {
   status: 'pending' | 'processing' | 'completed' | 'failed';
   image3dUrl?: string;
 }
+
+export interface KiriVideoUploadRequest {
+  videoFile: string;
+  modelQuality?: number;
+  textureQuality?: number;
+  fileFormat?: string;
+  isMask?: number;
+  textureSmoothing?: number;
+}
+
+export interface KiriVideoUploadResponse {
+  code: number;
+  msg: string;
+  data: {
+    serialize: string;
+    calculateType: number;
+  };
+  ok: boolean;
+}
+
+export interface KiriTaskStatus {
+  serialize: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  progress?: number;
+  downloadUrl?: string;
+  error?: string;
+}

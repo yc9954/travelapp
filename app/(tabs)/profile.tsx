@@ -169,10 +169,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: 'bold',
     color: '#1F2937',
-    letterSpacing: -0.5,
   },
   profileHeader: {
     backgroundColor: '#FFFFFF',

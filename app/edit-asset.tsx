@@ -29,12 +29,12 @@ const NEBULA_THUMBNAIL_URL = nebulaAsset?.thumbnail || '';
 const NEBULA_CAPTURE_URL = nebulaAsset?.captureUrl || '';
 
 export default function EditAssetScreen() {
-  const params = useLocalSearchParams<{ imageUrl?: string; captureUrl?: string; isLuma?: string }>();
+  const params = useLocalSearchParams<{ imageUrl?: string; captureUrl?: string; isLuma?: string; isKiri?: string }>();
   const webViewRef = useRef<WebView>(null);
 
   const [imageUrl] = useState(params.imageUrl || '');
   const [captureUrl] = useState(params.captureUrl || '');
-  const [isLuma] = useState(params.isLuma === 'true');
+  const [isLuma] = useState(params.isLuma === 'true' || params.isKiri === 'true');
 
   const [caption, setCaption] = useState('');
   const [location, setLocation] = useState('');
@@ -289,7 +289,7 @@ export default function EditAssetScreen() {
 
   const handleRemoveBackground = () => {
     if (!isLuma) {
-      Alert.alert('알림', '배경 제거는 Luma 가우시안 스플래팅 에셋에서만 가능합니다.');
+      Alert.alert('Notice', 'Background removal is only available for Luma Gaussian Splatting assets.');
       return;
     }
 
@@ -308,7 +308,7 @@ export default function EditAssetScreen() {
 
   const handleAddText = () => {
     if (!textOverlay.trim()) {
-      Alert.alert('알림', '텍스트를 입력해주세요.');
+      Alert.alert('Notice', 'Please enter text.');
       return;
     }
 
@@ -322,12 +322,12 @@ export default function EditAssetScreen() {
     `);
 
     setShowEditMenu(false);
-    Alert.alert('완료', '텍스트가 추가되었습니다!');
+    Alert.alert('Success', 'Text has been added!');
   };
 
   const handlePost = async () => {
     if (!imageUrl || !caption) {
-      Alert.alert('오류', '이미지와 캡션을 입력해주세요.');
+      Alert.alert('Error', 'Please enter an image and caption.');
       return;
     }
 
@@ -360,11 +360,11 @@ export default function EditAssetScreen() {
         },
       });
 
-      Alert.alert('성공', '게시물이 업로드되었습니다!');
+      Alert.alert('Success', 'Post uploaded successfully!');
       router.push('/(tabs)/feed');
     } catch (error) {
       console.error('Upload error:', error);
-      Alert.alert('오류', '게시물 업로드에 실패했습니다.');
+      Alert.alert('Error', 'Failed to upload post.');
     } finally {
       setIsUploading(false);
     }
@@ -373,17 +373,17 @@ export default function EditAssetScreen() {
   const editOptions = [
     {
       id: 'removeBackground',
-      title: removeBackground ? '배경 복원' : '배경 제거',
+      title: removeBackground ? 'Restore Background' : 'Remove Background',
       icon: 'layers-outline' as const,
-      description: 'Luma semanticsMask 필터링',
+      description: 'Separate background with semantic layer filtering',
       onPress: handleRemoveBackground,
       disabled: !isLuma,
     },
     {
       id: 'addText',
-      title: '텍스트 추가',
+      title: 'Add Text',
       icon: 'text-outline' as const,
-      description: '3D 씬에 텍스트 오버레이',
+      description: 'Add text overlay to 3D scene',
       onPress: () => {},
       disabled: false,
     },
@@ -395,7 +395,7 @@ export default function EditAssetScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#1F2937" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>에셋 편집</Text>
+        <Text style={styles.headerTitle}>Edit Asset</Text>
         <TouchableOpacity onPress={() => setShowEditMenu(true)} style={styles.editButton}>
           <Ionicons name="create-outline" size={24} color="#6366F1" />
         </TouchableOpacity>
@@ -426,7 +426,7 @@ export default function EditAssetScreen() {
             <View style={styles.placeholder}>
               <Ionicons name="image" size={64} color="#9CA3AF" />
               <Text style={styles.placeholderText}>
-                2D 이미지는 미리보기만 가능합니다
+                2D images can only be previewed
               </Text>
             </View>
           )}
@@ -447,9 +447,9 @@ export default function EditAssetScreen() {
         >
           <SafeAreaView style={styles.modalContainer}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>편집 옵션</Text>
+              <Text style={styles.modalTitle}>Edit Options</Text>
               <TouchableOpacity onPress={() => setShowEditMenu(false)}>
-                <Ionicons name="close" size={24} color="#1F2937" />
+                <Ionicons name="close" size={24} color="#6B7280" />
               </TouchableOpacity>
             </View>
 
@@ -489,7 +489,7 @@ export default function EditAssetScreen() {
                     </Text>
                     {item.disabled && (
                       <Text style={styles.editOptionWarning}>
-                        Luma 에셋 전용 기능
+                        Luma asset only
                       </Text>
                     )}
                   </View>
@@ -502,19 +502,19 @@ export default function EditAssetScreen() {
               contentContainerStyle={styles.editOptionsList}
             />
 
-            {/* 텍스트 추가 입력 영역 */}
+            {/* Text overlay input section */}
             <View style={styles.textInputSection}>
-              <Text style={styles.sectionTitle}>텍스트 오버레이</Text>
+              <Text style={styles.sectionTitle}>Text Overlay</Text>
               <TextInput
                 style={styles.textInput}
-                placeholder="추가할 텍스트 입력..."
+                placeholder="Enter text to add..."
                 placeholderTextColor="#9CA3AF"
                 value={textOverlay}
                 onChangeText={setTextOverlay}
                 multiline
               />
               <View style={styles.textPositionSelector}>
-                <Text style={styles.textPositionLabel}>위치:</Text>
+                <Text style={styles.textPositionLabel}>Position:</Text>
                 {(['top', 'center', 'bottom'] as const).map((pos) => (
                   <TouchableOpacity
                     key={pos}
@@ -530,7 +530,7 @@ export default function EditAssetScreen() {
                         textPosition === pos && styles.textPositionButtonTextActive,
                       ]}
                     >
-                      {pos === 'top' ? '상단' : pos === 'center' ? '중앙' : '하단'}
+                      {pos === 'top' ? 'Top' : pos === 'center' ? 'Center' : 'Bottom'}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -540,17 +540,17 @@ export default function EditAssetScreen() {
                 onPress={handleAddText}
                 disabled={!textOverlay.trim()}
               >
-                <Text style={styles.addTextButtonText}>텍스트 적용</Text>
+                <Text style={styles.addTextButtonText}>Apply Text</Text>
               </TouchableOpacity>
             </View>
           </SafeAreaView>
         </Modal>
 
-        {/* 게시물 정보 입력 */}
+        {/* Post information input */}
         <View style={styles.form}>
           <TextInput
             style={styles.input}
-            placeholder="캡션을 입력하세요..."
+            placeholder="Enter caption..."
             placeholderTextColor="#9CA3AF"
             value={caption}
             onChangeText={setCaption}
@@ -560,7 +560,7 @@ export default function EditAssetScreen() {
 
           <TextInput
             style={styles.input}
-            placeholder="위치 (예: 파리, 프랑스)"
+            placeholder="Location (e.g., Paris, France)"
             placeholderTextColor="#9CA3AF"
             value={location}
             onChangeText={setLocation}
@@ -568,7 +568,7 @@ export default function EditAssetScreen() {
 
           <TextInput
             style={styles.input}
-            placeholder="해시태그 (예: #가우시안스플래팅 #3D)"
+            placeholder="Hashtags (e.g., #GaussianSplatting #3D)"
             placeholderTextColor="#9CA3AF"
             value={hashtags}
             onChangeText={setHashtags}
@@ -576,9 +576,9 @@ export default function EditAssetScreen() {
 
           {isLuma && (
             <View style={styles.lumaInfo}>
-              <Ionicons name="information-circle" size={20} color="#6366F1" />
+              <Ionicons name="information-circle-outline" size={24} color="#6366F1" />
               <Text style={styles.lumaInfoText}>
-                Luma 가우시안 스플래팅 에셋입니다. 360도 회전하며 편집할 수 있습니다.
+                This is a Luma Gaussian Splatting asset. You can rotate and edit it 360 degrees.
               </Text>
             </View>
           )}
@@ -591,7 +591,7 @@ export default function EditAssetScreen() {
             {isUploading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.postButtonText}>게시</Text>
+              <Text style={styles.postButtonText}>Post</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -603,31 +603,33 @@ export default function EditAssetScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFFFFF',
   },
   header: {
     backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 0.5,
     borderBottomColor: '#E5E7EB',
   },
   backButton: {
     padding: 4,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#1F2937',
+    letterSpacing: -0.3,
   },
   editButton: {
     padding: 4,
   },
   content: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
   },
   viewerContainer: {
     height: 400,
@@ -671,26 +673,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingVertical: 16,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0.5,
     borderBottomColor: '#E5E7EB',
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '700',
     color: '#1F2937',
+    letterSpacing: -0.3,
   },
   editOptionsList: {
-    padding: 16,
+    padding: 20,
   },
   editOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
+    padding: 18,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 1,
   },
   editOptionDisabled: {
     opacity: 0.5,
@@ -699,7 +709,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -712,6 +722,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1F2937',
     marginBottom: 4,
+    letterSpacing: -0.2,
   },
   editOptionTitleDisabled: {
     color: '#9CA3AF',
@@ -719,6 +730,7 @@ const styles = StyleSheet.create({
   editOptionDescription: {
     fontSize: 14,
     color: '#6B7280',
+    lineHeight: 20,
   },
   editOptionWarning: {
     fontSize: 12,
@@ -726,33 +738,34 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   textInputSection: {
-    padding: 16,
-    borderTopWidth: 1,
+    padding: 20,
+    borderTopWidth: 0.5,
     borderTopColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFFFFF',
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#1F2937',
-    marginBottom: 12,
+    marginBottom: 16,
+    letterSpacing: -0.3,
   },
   textInput: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F9FAFB',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
     color: '#1F2937',
     marginBottom: 12,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: '#E5E7EB',
     minHeight: 80,
   },
   textPositionSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   textPositionLabel: {
     fontSize: 14,
@@ -764,8 +777,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 0.5,
     borderColor: '#E5E7EB',
     marginRight: 8,
   },
@@ -782,10 +795,15 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   addTextButton: {
-    backgroundColor: '#6366F1',
-    paddingVertical: 12,
+    backgroundColor: '#1F2937',
+    paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   addTextButtonText: {
     color: '#FFFFFF',
@@ -793,39 +811,48 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   form: {
-    padding: 16,
+    padding: 20,
+    backgroundColor: '#FFFFFF',
   },
   input: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F9FAFB',
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
     fontSize: 16,
     color: '#1F2937',
     marginBottom: 12,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: '#E5E7EB',
   },
   lumaInfo: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    backgroundColor: '#EEF2FF',
-    borderRadius: 12,
+    alignItems: 'flex-start',
+    padding: 16,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 14,
     marginBottom: 12,
-    gap: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 12,
   },
   lumaInfoText: {
     flex: 1,
     fontSize: 14,
-    color: '#4F46E5',
+    color: '#6B7280',
+    lineHeight: 20,
   },
   postButton: {
-    backgroundColor: '#6366F1',
+    backgroundColor: '#1F2937',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   postButtonText: {
     color: '#FFFFFF',
