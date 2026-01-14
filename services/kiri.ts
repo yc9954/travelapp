@@ -294,9 +294,11 @@ class KiriService {
       let lastError: any;
       
       const endpoints = [
-        `/open/photo/status/${serialize}`,
-        `/open/photo/${serialize}`,
-        `/open/model/${serialize}`,
+        `/open/3dgs/status/${serialize}`, // 3DGS scan status endpoint
+        `/open/3dgs/${serialize}`, // 3DGS scan endpoint
+        `/open/model/${serialize}`, // Model endpoint (works for all scan types)
+        `/open/photo/status/${serialize}`, // Photo scan status (fallback)
+        `/open/photo/${serialize}`, // Photo scan (fallback)
       ];
 
       for (const endpoint of endpoints) {
