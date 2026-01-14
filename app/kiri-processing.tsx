@@ -50,6 +50,13 @@ export default function KiriProcessingScreen() {
     try {
       const task = await kiriService.getTaskFromDB(params.serialize || '');
       if (task) {
+        console.log('Task loaded from DB:', {
+          serialize: task.serialize,
+          status: task.status,
+          progress: task.progress,
+          download_url: task.download_url,
+        });
+        
         setStatus({
           serialize: task.serialize,
           status: task.status as any,
@@ -80,6 +87,13 @@ export default function KiriProcessingScreen() {
     if (!params.serialize) return;
 
     const unsubscribe = kiriService.subscribeToTask(params.serialize || '', (task) => {
+      console.log('Task updated via Realtime:', {
+        serialize: task.serialize,
+        status: task.status,
+        progress: task.progress,
+        download_url: task.download_url,
+      });
+      
       setStatus({
         serialize: task.serialize,
         status: task.status,
@@ -169,9 +183,10 @@ export default function KiriProcessingScreen() {
       case 'pending':
         return 'Video uploaded, waiting to start processing...';
       case 'processing':
-        return status.progress 
-          ? `Processing... ${status.progress}%`
-          : 'Processing your video into 3D model...';
+        if (status.progress !== null && status.progress !== undefined) {
+          return `Processing... ${status.progress}%`;
+        }
+        return 'Processing your video into 3D model...';
       case 'completed':
         return 'Processing completed!';
       case 'failed':
@@ -215,10 +230,18 @@ export default function KiriProcessingScreen() {
                 <View 
                   style={[
                     styles.progressFill, 
-                    { width: `${status.progress || 0}%` }
+                    { width: `${status.progress !== null && status.progress !== undefined ? status.progress : 0}%` }
                   ]} 
                 />
               </View>
+              {status.progress !== null && status.progress !== undefined && (
+                <Text style={styles.progressText}>{status.progress}%</Text>
+              )}
+              {status.progress === null || status.progress === undefined ? (
+                <Text style={styles.progressHint}>
+                  Progress information will appear here when available
+                </Text>
+              ) : null}
             </View>
           )}
         </View>
@@ -308,8 +331,10 @@ const styles = StyleSheet.create({
     width: '100%',
     marginTop: 24,
     paddingHorizontal: 20,
+    alignItems: 'center',
   },
   progressBar: {
+    width: '100%',
     height: 8,
     backgroundColor: '#E5E7EB',
     borderRadius: 4,
@@ -319,6 +344,18 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: '#6366F1',
     borderRadius: 4,
+  },
+  progressText: {
+    marginTop: 8,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6366F1',
+  },
+  progressHint: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontStyle: 'italic',
   },
   infoContainer: {
     gap: 16,

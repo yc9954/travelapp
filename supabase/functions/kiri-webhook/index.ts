@@ -60,9 +60,22 @@ serve(async (req) => {
 
     // Map status
     const status = mapStatus(payload.status || payload.state)
-    const progress = payload.progress || payload.progress_percent || 0
+    // Try multiple possible field names for progress (0-100)
+    const progress = payload.progress !== undefined ? payload.progress :
+                     payload.progress_percent !== undefined ? payload.progress_percent :
+                     payload.progressPercent !== undefined ? payload.progressPercent :
+                     payload.percent !== undefined ? payload.percent :
+                     null // null means progress not available yet
     const downloadUrl = payload.download_url || payload.url || payload.model_url
     const errorMessage = payload.error || payload.error_message
+    
+    console.log('Extracted values:', {
+      serialize,
+      status,
+      progress,
+      downloadUrl: downloadUrl ? 'present' : 'missing',
+      errorMessage: errorMessage || 'none'
+    })
 
     // Update task in database
     const { data, error } = await supabase
