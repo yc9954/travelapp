@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as AuthSession from 'expo-auth-session';
 import { Link, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useState, useEffect } from 'react';
@@ -6,7 +7,6 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
-  Linking,
   Platform,
   StyleSheet,
   Text,
@@ -28,88 +28,13 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const { login, refreshAuth, isAuthenticated, isLoading: authLoading } = useAuth();
 
-  // OAuth redirect URL 처리
-  useEffect(() => {
-    const handleDeepLink = async (event: { url: string }) => {
-      const url = event.url;
-      console.log('Deep link received:', url);
-
-      // URL에서 토큰 추출
-      if (url.includes('#access_token=') || url.includes('access_token=')) {
-        try {
-          let accessToken: string | null = null;
-          let refreshToken: string | null = null;
-
-          // Hash fragment (#) 파싱
-          const hashIndex = url.indexOf('#');
-          if (hashIndex !== -1) {
-            const hashFragment = url.substring(hashIndex + 1);
-            const hashParams = new URLSearchParams(hashFragment);
-            accessToken = hashParams.get('access_token');
-            refreshToken = hashParams.get('refresh_token');
-          }
-
-          // Query params (?) 파싱 (fallback)
-          if (!accessToken) {
-            const queryIndex = url.indexOf('?');
-            if (queryIndex !== -1) {
-              const queryFragment = url.substring(queryIndex + 1);
-              const queryParams = new URLSearchParams(queryFragment);
-              accessToken = queryParams.get('access_token');
-              refreshToken = queryParams.get('refresh_token');
-            }
-          }
-
-          console.log('Tokens extracted:', { hasAccessToken: !!accessToken, hasRefreshToken: !!refreshToken });
-
-          if (accessToken && refreshToken) {
-            console.log('Setting session with extracted tokens...');
-            const { error } = await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-            });
-
-            if (error) {
-              console.error('Session error:', error);
-              Alert.alert('로그인 실패', '인증 처리에 실패했습니다.');
-              setIsGoogleLoading(false);
-            } else {
-              console.log('✅ Google OAuth session set successfully');
-              // AuthContext가 자동으로 사용자 정보 업데이트
-            }
-          }
-        } catch (error) {
-          console.error('Deep link processing error:', error);
-          setIsGoogleLoading(false);
-        }
-      }
-    };
-
-    // Deep link listener 등록
-    const subscription = Linking.addEventListener('url', handleDeepLink);
-
-    // 앱이 이미 열려있을 때 초기 URL 확인
-    Linking.getInitialURL().then((url) => {
-      if (url) {
-        handleDeepLink({ url });
-      }
-    });
-
-    return () => {
-      subscription.remove();
-    };
-  }, []);
-
   // 로그인 성공 시 자동으로 피드로 이동
   useEffect(() => {
     if (isAuthenticated && !authLoading) {
       console.log('User is authenticated, navigating to feed');
       setIsGoogleLoading(false);
       setIsLoading(false);
-      // 약간의 지연을 두어 프로필 로드가 완료되도록 함
-      setTimeout(() => {
-        router.replace('/(tabs)/feed');
-      }, 500);
+      router.replace('/(tabs)/feed');
     }
   }, [isAuthenticated, authLoading]);
 
@@ -136,13 +61,13 @@ export default function LoginScreen() {
   const signInWithGoogle = async () => {
     try {
       setIsGoogleLoading(true);
-
       console.log('🔑 Logging in with Google...');
 
-      // Redirect URL 생성 - 개발/프로덕션 모두 지원
-      const redirectUrl = __DEV__
-        ? 'exp://127.0.0.1:8081'  // 개발 환경
-        : 'splatspace://';         // 프로덕션
+      // Supabase OAuth URL 생성
+      const redirectUrl = AuthSession.makeRedirectUri({
+        scheme: 'splatspace',
+        useProxy: true,
+      });
 
       console.log('Redirect URL:', redirectUrl);
 
@@ -150,7 +75,6 @@ export default function LoginScreen() {
         provider: 'google',
         options: {
           redirectTo: redirectUrl,
-          skipBrowserRedirect: true, // 브라우저 자동 redirect 비활성화
         },
       });
 
@@ -164,11 +88,75 @@ export default function LoginScreen() {
       if (data?.url) {
         console.log('Opening OAuth URL:', data.url);
 
-        // 시스템 브라우저로 OAuth URL 열기
-        await Linking.openURL(data.url);
+        // WebBrowser로 OAuth URL 열기
+        const result = await WebBrowser.openAuthSessionAsync(
+          data.url,
+          redirectUrl
+        );
 
-        // Deep link listener가 자동으로 redirect를 처리함
-        console.log('Waiting for OAuth redirect...');
+        console.log('OAuth result:', result.type);
+
+        if (result.type === 'success' && result.url) {
+          try {
+            console.log('Parsing URL for tokens');
+
+            // URL에서 토큰 추출
+            let accessToken: string | null = null;
+            let refreshToken: string | null = null;
+
+            // Hash fragment (#) 파싱
+            const hashIndex = result.url.indexOf('#');
+            if (hashIndex !== -1) {
+              const hashFragment = result.url.substring(hashIndex + 1);
+              const hashParams = new URLSearchParams(hashFragment);
+              accessToken = hashParams.get('access_token');
+              refreshToken = hashParams.get('refresh_token');
+            }
+
+            // Query params (?) 파싱 (fallback)
+            if (!accessToken) {
+              const queryIndex = result.url.indexOf('?');
+              if (queryIndex !== -1) {
+                const queryFragment = result.url.substring(queryIndex + 1);
+                const queryParams = new URLSearchParams(queryFragment);
+                accessToken = queryParams.get('access_token');
+                refreshToken = queryParams.get('refresh_token');
+              }
+            }
+
+            console.log('Tokens found:', { hasAccessToken: !!accessToken, hasRefreshToken: !!refreshToken });
+
+            if (accessToken && refreshToken) {
+              const { error: sessionError } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+              });
+
+              if (sessionError) {
+                console.error('Session error:', sessionError);
+                Alert.alert('로그인 실패', '인증 처리에 실패했습니다.');
+                setIsGoogleLoading(false);
+              } else {
+                console.log('✅ Google OAuth session set successfully');
+                // AuthContext가 자동으로 사용자 정보 업데이트
+              }
+            } else {
+              console.error('No tokens found in URL');
+              Alert.alert('로그인 실패', '인증 토큰을 찾을 수 없습니다.');
+              setIsGoogleLoading(false);
+            }
+          } catch (urlError) {
+            console.error('URL parsing error:', urlError);
+            Alert.alert('로그인 실패', 'URL 파싱 중 오류가 발생했습니다.');
+            setIsGoogleLoading(false);
+          }
+        } else if (result.type === 'cancel') {
+          console.log('User cancelled the login flow');
+          setIsGoogleLoading(false);
+        } else {
+          console.log('OAuth flow did not complete successfully');
+          setIsGoogleLoading(false);
+        }
       } else {
         console.error('No OAuth URL returned from Supabase');
         Alert.alert('로그인 실패', 'OAuth URL을 받아오지 못했습니다.');
