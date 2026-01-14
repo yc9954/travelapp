@@ -27,23 +27,31 @@ export default function KiriProcessingScreen() {
 
   useEffect(() => {
     if (params.serialize) {
+      console.log('KIRI Processing Screen initialized with serialize:', params.serialize);
       // Try to get task from Supabase first
       loadTaskFromDB();
       // Set up Realtime subscription
       setupRealtimeSubscription();
       // Also start polling as fallback
       startPolling();
+      
+      // Periodically check status from DB (every 10 seconds) as backup
+      const intervalId = setInterval(() => {
+        console.log('Periodic status check...');
+        loadTaskFromDB();
+      }, 10000);
+      
+      return () => {
+        // Cleanup subscription
+        if (unsubscribeRef.current) {
+          unsubscribeRef.current();
+        }
+        clearInterval(intervalId);
+      };
     } else {
       setError('No task ID provided');
       setIsLoading(false);
     }
-
-    return () => {
-      // Cleanup subscription
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
-      }
-    };
   }, [params.serialize]);
 
   const loadTaskFromDB = async () => {
@@ -84,14 +92,19 @@ export default function KiriProcessingScreen() {
   };
 
   const setupRealtimeSubscription = () => {
-    if (!params.serialize) return;
+    if (!params.serialize) {
+      console.warn('Cannot setup Realtime subscription: no serialize');
+      return;
+    }
 
+    console.log('Setting up Realtime subscription for:', params.serialize);
     const unsubscribe = kiriService.subscribeToTask(params.serialize || '', (task) => {
-      console.log('Task updated via Realtime:', {
+      console.log('📡 Task updated via Realtime:', {
         serialize: task.serialize,
         status: task.status,
         progress: task.progress,
         download_url: task.download_url,
+        timestamp: new Date().toISOString(),
       });
       
       setStatus({
@@ -104,6 +117,7 @@ export default function KiriProcessingScreen() {
 
       // If completed, navigate immediately
       if (task.status === 'completed' && task.download_url) {
+        console.log('✅ Processing completed! Navigating to edit screen...');
         router.replace({
           pathname: '/edit-asset',
           params: {
@@ -117,6 +131,7 @@ export default function KiriProcessingScreen() {
     });
 
     unsubscribeRef.current = unsubscribe;
+    console.log('Realtime subscription set up successfully');
   };
 
   const startPolling = async () => {
@@ -181,7 +196,7 @@ export default function KiriProcessingScreen() {
     
     switch (status.status) {
       case 'pending':
-        return 'Video uploaded, waiting to start processing...';
+        return 'Video uploaded successfully. Waiting for KIRI Engine to start processing...';
       case 'processing':
         if (status.progress !== null && status.progress !== undefined) {
           return `Processing... ${status.progress}%`;
