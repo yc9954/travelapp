@@ -65,16 +65,28 @@ export default function AssetViewerScreen() {
 
   const handleLike = async () => {
     if (!post) return;
+
+    // 낙관적 UI 업데이트
+    const previousState = { isLiked: post.isLiked, likesCount: post.likesCount };
+    const newIsLiked = !post.isLiked;
+    const newLikesCount = newIsLiked ? post.likesCount + 1 : post.likesCount - 1;
+
+    setPost({ ...post, isLiked: newIsLiked, likesCount: newLikesCount });
+
     try {
-      if (post.isLiked) {
+      if (previousState.isLiked) {
         await api.unlikePost(post.id);
-        setPost({ ...post, isLiked: false, likesCount: post.likesCount - 1 });
       } else {
         await api.likePost(post.id);
-        setPost({ ...post, isLiked: true, likesCount: post.likesCount + 1 });
       }
+
+      // API 호출 성공 후 최신 데이터로 동기화
+      const updatedPost = await api.getPost(post.id);
+      setPost(updatedPost);
     } catch (error) {
       console.error('Failed to toggle like:', error);
+      // 실패 시 이전 상태로 복원
+      setPost({ ...post, isLiked: previousState.isLiked, likesCount: previousState.likesCount });
     }
   };
 
@@ -86,8 +98,11 @@ export default function AssetViewerScreen() {
       const newComment = await api.createComment(postId, commentText.trim());
       setComments([newComment, ...comments]);
       setCommentText('');
+
+      // 트리거가 업데이트한 댓글 카운트를 반영하기 위해 post 재조회
       if (post) {
-        setPost({ ...post, commentsCount: post.commentsCount + 1 });
+        const updatedPost = await api.getPost(postId);
+        setPost(updatedPost);
       }
     } catch (error) {
       console.error('Failed to create comment:', error);
