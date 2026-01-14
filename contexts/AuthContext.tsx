@@ -42,8 +42,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await StorageService.saveUserData(profile);
           setUser(profile);
           console.log(`✅ Profile loaded in ${Date.now() - profileStartTime}ms`);
-        } catch (error) {
+        } catch (error: any) {
           console.error('Failed to load profile on sign in:', error);
+          // 네트워크 에러인 경우 재시도하지 않고 기본 정보 사용
+          if (error?.message?.includes('Network request failed')) {
+            console.warn('Network error during profile load, using basic user info');
+          }
 
           // Profile 로드 실패 시 기본 정보 사용
           const displayName = supabaseUser.user_metadata?.full_name
@@ -81,9 +85,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const checkAuth = async () => {
+    const checkStartTime = Date.now(); // 함수 스코프로 이동
     try {
       console.log('🔍 Checking auth status...');
-      const checkStartTime = Date.now();
 
       // 먼저 Supabase 세션 확인 (AsyncStorage에서 자동 복원)
       const { data: { session }, error } = await supabase.auth.getSession();
@@ -147,7 +151,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Auth check error:', error);
     } finally {
-      console.log(`⏱️ Total auth check took ${Date.now()}ms`);
+      const totalTime = Date.now() - checkStartTime;
+      console.log(`⏱️ Total auth check took ${totalTime}ms`);
       setIsLoading(false);
     }
   };
@@ -184,18 +189,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     try {
       console.log('🚪 Logging out...');
-      // Supabase 세션 완전히 제거 (모든 탭/창에서)
-      await supabase.auth.signOut({ scope: 'local' });
+      // 상태 먼저 초기화 (UI 즉시 반영)
+      setUser(null);
       // 로컬 스토리지 클리어
       await StorageService.clearAll();
-      // 상태 초기화
-      setUser(null);
+      // Supabase 세션 완전히 제거 (모든 탭/창에서)
+      await supabase.auth.signOut({ scope: 'local' });
       console.log('✅ Logout complete');
     } catch (error) {
       console.error('Logout error:', error);
       // 에러가 나도 로컬 상태는 클리어
-      await StorageService.clearAll();
       setUser(null);
+      await StorageService.clearAll();
     }
   };
 

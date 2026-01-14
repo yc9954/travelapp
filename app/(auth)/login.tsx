@@ -34,7 +34,10 @@ export default function LoginScreen() {
       console.log('User is authenticated, navigating to feed');
       setIsGoogleLoading(false);
       setIsLoading(false);
-      router.replace('/(tabs)/feed');
+      // 약간의 지연을 두어 프로필 로드가 완료되도록 함
+      setTimeout(() => {
+        router.replace('/(tabs)/feed');
+      }, 500);
     }
   }, [isAuthenticated, authLoading]);
 
@@ -80,9 +83,10 @@ export default function LoginScreen() {
       await supabase.auth.signOut({ scope: 'local' });
 
       // Supabase OAuth URL 생성
+      // 개발 환경에서는 exp://, 프로덕션에서는 splatspace:// 사용
       const redirectUrl = AuthSession.makeRedirectUri({
         scheme: 'splatspace',
-        useProxy: false,
+        useProxy: true, // 개발 환경에서 expo proxy 사용
       });
 
       console.log('Redirect URL:', redirectUrl);

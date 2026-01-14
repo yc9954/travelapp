@@ -180,6 +180,23 @@ export const SupabaseAPI = {
       return convertProfile(newProfile);
     }
 
+    // 네트워크 에러 감지
+    const isNetworkError = error.message?.includes('Network request failed') || 
+                          error.message?.includes('fetch failed') ||
+                          error.message?.includes('network') ||
+                          !error.code;
+    
+    if (isNetworkError) {
+      console.error('🌐 네트워크 연결 오류 (getProfile):', error.message);
+      throw new Error(
+        '프로필을 불러오는 중 네트워크 연결에 실패했습니다.\n\n' +
+        '확인 사항:\n' +
+        '1. 인터넷 연결 상태 확인\n' +
+        '2. Android 에뮬레이터 사용 시: 에뮬레이터의 네트워크 설정 확인\n' +
+        '3. 앱을 재시작해보세요'
+      );
+    }
+
     // 다른 에러는 그대로 throw
     throw error;
   },
@@ -229,6 +246,24 @@ export const SupabaseAPI = {
       .range(offset, offset + limit - 1);
 
     if (error) {
+      // 네트워크 에러 감지
+      const isNetworkError = error.message?.includes('Network request failed') || 
+                            error.message?.includes('fetch failed') ||
+                            error.message?.includes('network') ||
+                            !error.code; // Supabase 에러가 아닌 경우 (네트워크 에러일 가능성)
+      
+      if (isNetworkError) {
+        console.error('🌐 네트워크 연결 오류:', error.message);
+        throw new Error(
+          '네트워크 연결에 실패했습니다.\n\n' +
+          '확인 사항:\n' +
+          '1. 인터넷 연결 상태 확인\n' +
+          '2. Android 에뮬레이터 사용 시: 에뮬레이터의 네트워크 설정 확인\n' +
+          '3. 방화벽이나 VPN이 Supabase 접근을 차단하지 않는지 확인\n' +
+          '4. 앱을 재시작해보세요'
+        );
+      }
+      
       // 디버깅: 실제 에러 정보 출력
       console.error('❌ Supabase 에러 상세 정보:');
       console.error('  Code:', error.code);
