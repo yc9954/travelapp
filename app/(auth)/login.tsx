@@ -79,8 +79,6 @@ export default function LoginScreen() {
       }
 
       console.log('🔑 Logging in with Google...');
-      // 로그인 전에 기존 세션 클리어 (충돌 방지)
-      await supabase.auth.signOut({ scope: 'local' });
 
       // Supabase OAuth URL 생성
       // 개발 환경에서는 exp://, 프로덕션에서는 splatspace:// 사용

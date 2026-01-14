@@ -84,7 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const checkAuth = async () => {
-    const checkStartTime = Date.now(); // 함수 스코프로 이동
+    const checkStartTime = Date.now();
     try {
       console.log('🔍 Checking auth status...');
 
@@ -92,7 +92,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data: { session }, error } = await supabase.auth.getSession();
       console.log(`⏱️ Session check took ${Date.now() - checkStartTime}ms`);
 
-      if (session?.user && !error) {
+      if (error) {
+        console.error('Session check error:', error);
+      }
+
+      if (session?.user) {
         console.log('✅ Supabase session found:', session.user.email);
         const profileStartTime = Date.now();
 
@@ -135,16 +139,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(convertedUser);
       } else {
         console.log('❌ No Supabase session found');
-        // Supabase 세션이 없지만 로컬 스토리지에 데이터가 있는 경우
-        // 이는 이전 버전에서 마이그레이션된 사용자일 수 있음
+
+        // AsyncStorage를 직접 확인하여 orphaned 데이터 클리어
         const token = await StorageService.getAuthToken();
         const userData = await StorageService.getUserData();
 
-        if (token && userData) {
-          console.log('⚠️ Local storage data found but Supabase session missing');
-          console.log('⚠️ Please log out and log in again to restore full functionality');
-          // 로컬 데이터를 사용하되, 기능 제한 경고
-          setUser(userData);
+        if (token || userData) {
+          console.log('⚠️ Found orphaned local storage data, clearing...');
+          await StorageService.clearAll();
         }
       }
     } catch (error) {
