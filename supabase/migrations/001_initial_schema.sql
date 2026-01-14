@@ -1,6 +1,10 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- ============================================================================
+-- TABLES
+-- ============================================================================
+
 -- Profiles table (extends Supabase Auth users)
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -51,15 +55,23 @@ CREATE TABLE IF NOT EXISTS comments (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Indexes for better performance
+-- ============================================================================
+-- INDEXES
+-- ============================================================================
+
 CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts(user_id);
 CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_likes_post_id ON likes(post_id);
 CREATE INDEX IF NOT EXISTS idx_likes_user_id ON likes(user_id);
 CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id);
 CREATE INDEX IF NOT EXISTS idx_comments_user_id ON comments(user_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_username ON profiles(username);
+CREATE INDEX IF NOT EXISTS idx_profiles_email ON profiles(email);
 
--- Enable Row Level Security
+-- ============================================================================
+-- ROW LEVEL SECURITY (RLS)
+-- ============================================================================
+
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE likes ENABLE ROW LEVEL SECURITY;
@@ -139,103 +151,229 @@ CREATE POLICY "Users can delete own comments"
   ON comments FOR DELETE
   USING (auth.uid() = user_id);
 
--- Function to handle new user creation
+-- ============================================================================
+-- TRIGGERS & FUNCTIONS
+-- ============================================================================
+
+-- Function to automatically create profile when user signs up
 CREATE OR REPLACE FUNCTION handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE plpgsql
+AS $$
 BEGIN
-  INSERT INTO public.profiles (id, username, email, profile_image)
+  -- Insert new profile or update existing one
+  INSERT INTO public.profiles (
+    id,
+    username,
+    email,
+    profile_image,
+    bio,
+    followers_count,
+    following_count,
+    posts_count
+  )
   VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
+    COALESCE(
+      NEW.raw_user_meta_data->>'username',
+      NEW.raw_user_meta_data->>'full_name',
+      NEW.raw_user_meta_data->>'name',
+      split_part(NEW.email, '@', 1),
+      'user'
+    ),
     NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'avatar_url', NEW.raw_user_meta_data->>'picture')
+    COALESCE(
+      NEW.raw_user_meta_data->>'avatar_url',
+      NEW.raw_user_meta_data->>'picture'
+    ),
+    COALESCE(NEW.raw_user_meta_data->>'bio', ''),
+    0,
+    0,
+    0
   )
-  ON CONFLICT (id) DO NOTHING;  -- 중복 프로필 생성 방지
+  ON CONFLICT (id) DO UPDATE SET
+    username = COALESCE(
+      EXCLUDED.username,
+      profiles.username
+    ),
+    email = EXCLUDED.email,
+    profile_image = COALESCE(
+      EXCLUDED.profile_image,
+      profiles.profile_image
+    ),
+    bio = COALESCE(
+      EXCLUDED.bio,
+      profiles.bio
+    ),
+    updated_at = NOW();
+
   RETURN NEW;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Log error but don't fail the user creation
+    RAISE WARNING 'Failed to create/update profile for user %: %', NEW.id, SQLERRM;
+    RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 -- Trigger to create profile on user signup
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+  FOR EACH ROW
+  EXECUTE FUNCTION handle_new_user();
 
 -- Function to update post counts
 CREATE OR REPLACE FUNCTION update_post_counts()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
-    UPDATE profiles SET posts_count = posts_count + 1 WHERE id = NEW.user_id;
+    UPDATE profiles
+    SET posts_count = posts_count + 1,
+        updated_at = NOW()
+    WHERE id = NEW.user_id;
   ELSIF TG_OP = 'DELETE' THEN
-    UPDATE profiles SET posts_count = posts_count - 1 WHERE id = OLD.user_id;
+    UPDATE profiles
+    SET posts_count = GREATEST(0, posts_count - 1),
+        updated_at = NOW()
+    WHERE id = OLD.user_id;
   END IF;
   RETURN NULL;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 DROP TRIGGER IF EXISTS post_count_trigger ON posts;
 CREATE TRIGGER post_count_trigger
   AFTER INSERT OR DELETE ON posts
-  FOR EACH ROW EXECUTE FUNCTION update_post_counts();
+  FOR EACH ROW
+  EXECUTE FUNCTION update_post_counts();
 
 -- Function to update likes count
 CREATE OR REPLACE FUNCTION update_likes_count()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
-    UPDATE posts SET likes_count = likes_count + 1 WHERE id = NEW.post_id;
+    UPDATE posts
+    SET likes_count = likes_count + 1,
+        updated_at = NOW()
+    WHERE id = NEW.post_id;
   ELSIF TG_OP = 'DELETE' THEN
-    UPDATE posts SET likes_count = likes_count - 1 WHERE id = OLD.post_id;
+    UPDATE posts
+    SET likes_count = GREATEST(0, likes_count - 1),
+        updated_at = NOW()
+    WHERE id = OLD.post_id;
   END IF;
   RETURN NULL;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 DROP TRIGGER IF EXISTS likes_count_trigger ON likes;
 CREATE TRIGGER likes_count_trigger
   AFTER INSERT OR DELETE ON likes
-  FOR EACH ROW EXECUTE FUNCTION update_likes_count();
+  FOR EACH ROW
+  EXECUTE FUNCTION update_likes_count();
 
 -- Function to update comments count
 CREATE OR REPLACE FUNCTION update_comments_count()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
-    UPDATE posts SET comments_count = comments_count + 1 WHERE id = NEW.post_id;
+    UPDATE posts
+    SET comments_count = comments_count + 1,
+        updated_at = NOW()
+    WHERE id = NEW.post_id;
   ELSIF TG_OP = 'DELETE' THEN
-    UPDATE posts SET comments_count = comments_count - 1 WHERE id = OLD.post_id;
+    UPDATE posts
+    SET comments_count = GREATEST(0, comments_count - 1),
+        updated_at = NOW()
+    WHERE id = OLD.post_id;
   END IF;
   RETURN NULL;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 DROP TRIGGER IF EXISTS comments_count_trigger ON comments;
 CREATE TRIGGER comments_count_trigger
   AFTER INSERT OR DELETE ON comments
-  FOR EACH ROW EXECUTE FUNCTION update_comments_count();
+  FOR EACH ROW
+  EXECUTE FUNCTION update_comments_count();
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
 BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- Triggers for updated_at
 DROP TRIGGER IF EXISTS update_profiles_updated_at ON profiles;
 CREATE TRIGGER update_profiles_updated_at
   BEFORE UPDATE ON profiles
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
 
 DROP TRIGGER IF EXISTS update_posts_updated_at ON posts;
 CREATE TRIGGER update_posts_updated_at
   BEFORE UPDATE ON posts
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
 
 DROP TRIGGER IF EXISTS update_comments_updated_at ON comments;
 CREATE TRIGGER update_comments_updated_at
   BEFORE UPDATE ON comments
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
+-- DATA MIGRATION: Create profiles for existing users
+-- ============================================================================
+
+-- Create profiles for any auth.users that don't have profiles yet
+INSERT INTO public.profiles (
+  id,
+  username,
+  email,
+  profile_image,
+  bio,
+  followers_count,
+  following_count,
+  posts_count
+)
+SELECT
+  u.id,
+  COALESCE(
+    u.raw_user_meta_data->>'username',
+    u.raw_user_meta_data->>'full_name',
+    u.raw_user_meta_data->>'name',
+    split_part(u.email, '@', 1),
+    'user'
+  ) as username,
+  u.email,
+  COALESCE(
+    u.raw_user_meta_data->>'avatar_url',
+    u.raw_user_meta_data->>'picture'
+  ) as profile_image,
+  COALESCE(u.raw_user_meta_data->>'bio', '') as bio,
+  0 as followers_count,
+  0 as following_count,
+  0 as posts_count
+FROM auth.users u
+LEFT JOIN public.profiles p ON u.id = p.id
+WHERE p.id IS NULL
+ON CONFLICT (id) DO UPDATE SET
+  username = EXCLUDED.username,
+  email = EXCLUDED.email,
+  profile_image = COALESCE(EXCLUDED.profile_image, profiles.profile_image),
+  updated_at = NOW();
