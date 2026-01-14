@@ -97,12 +97,12 @@ class ApiService {
 
   // ==================== Likes ====================
 
-  async likePost(postId: string): Promise<void> {
-    await SupabaseAPI.likePost(postId);
+  async likePost(postId: string): Promise<Post> {
+    return await SupabaseAPI.likePost(postId);
   }
 
-  async unlikePost(postId: string): Promise<void> {
-    await SupabaseAPI.unlikePost(postId);
+  async unlikePost(postId: string): Promise<Post> {
+    return await SupabaseAPI.unlikePost(postId);
   }
 
   async getPostLikes(postId: string): Promise<User[]> {
@@ -115,12 +115,12 @@ class ApiService {
     return await SupabaseAPI.getPostComments(postId);
   }
 
-  async createComment(postId: string, content: string): Promise<Comment> {
+  async createComment(postId: string, content: string): Promise<{ comment: Comment; post: Post }> {
     return await SupabaseAPI.createComment(postId, content);
   }
 
-  async deleteComment(commentId: string): Promise<void> {
-    await SupabaseAPI.deleteComment(commentId);
+  async deleteComment(commentId: string): Promise<Post> {
+    return await SupabaseAPI.deleteComment(commentId);
   }
 
   // ==================== Profile ====================

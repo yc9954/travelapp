@@ -18,6 +18,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { api } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { updatePostInCache } from '../contexts/PostContext';
+import { StorageService } from '../services/storage';
 import type { Post, Comment } from '../types';
 
 export default function AssetViewerScreen() {
@@ -30,6 +32,7 @@ export default function AssetViewerScreen() {
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [isLiking, setIsLiking] = useState(false);
   const webViewRef = useRef<WebView>(null);
 
   useEffect(() => {
@@ -41,8 +44,64 @@ export default function AssetViewerScreen() {
 
   const loadPost = async () => {
     try {
+      // 먼저 좋아요 상태 일관성 검증 및 수정
+      await StorageService.validateAndFixLikeState();
+      
       const post = await api.getPost(postId);
-      setPost(post);
+      
+      // 로컬 스토리지에서 좋아요 상태와 카운트 확인
+      const storedCounts = await StorageService.getPostCount(postId);
+      const storedLikeState = await StorageService.getLikeState(postId);
+      
+      // 첫 로드 여부 확인: 이 특정 post에 대한 데이터가 로컬 스토리지에 없으면 첫 로드
+      const isFirstLoad = storedCounts === null && storedLikeState === null;
+      
+      let finalPost = { ...post };
+      
+      if (isFirstLoad) {
+        // 첫 로드: 서버 값으로 로컬 스토리지 초기화
+        console.log(`[AssetViewer] First load: Initializing local storage with server values for post ${postId}`);
+        await StorageService.savePostCounts(postId, {
+          likesCount: post.likesCount,
+          commentsCount: post.commentsCount,
+        });
+        await StorageService.saveLikeState(postId, post.isLiked);
+        finalPost = {
+          ...finalPost,
+          likesCount: post.likesCount,
+          commentsCount: post.commentsCount,
+          isLiked: post.isLiked,
+        };
+      } else {
+        // 이후 로드: 로컬 스토리지 값 사용
+        if (storedCounts) {
+          console.log(`[AssetViewer] Using stored counts for post ${postId}:`, storedCounts);
+          finalPost = {
+            ...finalPost,
+            likesCount: storedCounts.likesCount,
+            commentsCount: storedCounts.commentsCount,
+          };
+        }
+        
+        if (storedLikeState !== undefined) {
+          console.log(`[AssetViewer] Using stored like state for post ${postId}:`, storedLikeState);
+          finalPost = {
+            ...finalPost,
+            isLiked: storedLikeState,
+          };
+        }
+      }
+      
+      // 최종 검증: likesCount가 0인데 isLiked가 true인 경우 수정
+      if (finalPost.likesCount === 0 && finalPost.isLiked === true) {
+        console.log(`[AssetViewer] Fixing inconsistent state: post ${postId} has 0 likes but is marked as liked`);
+        finalPost.isLiked = false;
+        await StorageService.saveLikeState(postId, false);
+      }
+      
+      setPost(finalPost);
+      // 전역 캐시에 저장
+      updatePostInCache(postId, finalPost);
     } catch (error) {
       console.error('Failed to load post:', error);
     } finally {
@@ -64,48 +123,121 @@ export default function AssetViewerScreen() {
   };
 
   const handleLike = async () => {
-    if (!post) return;
+    if (!post || isLiking) return; // 이미 처리 중이면 무시
+
+    setIsLiking(true);
 
     // 낙관적 UI 업데이트
     const previousState = { isLiked: post.isLiked, likesCount: post.likesCount };
     const newIsLiked = !post.isLiked;
     const newLikesCount = newIsLiked ? post.likesCount + 1 : post.likesCount - 1;
 
-    setPost({ ...post, isLiked: newIsLiked, likesCount: newLikesCount });
+    // 낙관적 업데이트 적용
+    const optimisticPost = { ...post, isLiked: newIsLiked, likesCount: newLikesCount };
+    setPost(optimisticPost);
+
+    // 로컬 스토리지에 먼저 저장 (로컬 스토리지가 source of truth)
+    await StorageService.saveLikeState(post.id, newIsLiked);
+    await StorageService.savePostCounts(post.id, {
+      likesCount: newLikesCount,
+      commentsCount: post.commentsCount,
+    });
+
+    // 전역 캐시 업데이트 (다른 화면에 즉시 반영)
+    updatePostInCache(post.id, optimisticPost);
 
     try {
-      if (previousState.isLiked) {
-        await api.unlikePost(post.id);
-      } else {
-        await api.likePost(post.id);
+      // 서버에 요청은 보내지만, 응답은 참고만 하고 로컬 스토리지 값을 우선 사용
+      const serverPost = previousState.isLiked
+        ? await api.unlikePost(post.id)
+        : await api.likePost(post.id);
+      
+      console.log(`[AssetViewer] Server response for post ${post.id}:`, {
+        isLiked: serverPost.isLiked,
+        likesCount: serverPost.likesCount,
+      });
+      
+      // 서버 응답과 로컬 스토리지 값 비교
+      // 로컬 스토리지 값이 더 신뢰할 수 있으므로 로컬 스토리지 값을 사용
+      // 서버 응답이 크게 다르면 경고만 출력
+      if (Math.abs(serverPost.likesCount - newLikesCount) > 1) {
+        console.warn(`[AssetViewer] Server response differs significantly from local storage. Using local storage value.`, {
+          local: newLikesCount,
+          server: serverPost.likesCount,
+        });
       }
-
-      // API 호출 성공 후 최신 데이터로 동기화
-      const updatedPost = await api.getPost(post.id);
-      setPost(updatedPost);
-    } catch (error) {
+      
+      // 로컬 스토리지 값을 사용 (이미 저장됨)
+      // UI는 이미 낙관적 업데이트로 업데이트되었고, 로컬 스토리지에도 저장되었음
+    } catch (error: any) {
       console.error('Failed to toggle like:', error);
-      // 실패 시 이전 상태로 복원
-      setPost({ ...post, isLiked: previousState.isLiked, likesCount: previousState.likesCount });
+      
+      // 에러가 발생해도 로컬 스토리지 값은 이미 저장되었으므로 유지
+      // 네트워크 에러 등으로 서버 요청이 실패해도 로컬 스토리지 값 사용
+      // 중복 키 오류(23505)는 이미 좋아요가 있는 상태에서 다시 누른 경우이므로 정상 처리
+      if (error?.code === '23505') {
+        console.log(`[AssetViewer] Duplicate key error (already liked/unliked). Local storage value is correct.`);
+        // 로컬 스토리지 값이 이미 올바르게 저장되어 있으므로 그대로 사용
+      } else {
+        // 다른 오류인 경우에도 로컬 스토리지 값은 유지
+        // 서버 요청이 실패해도 로컬 스토리지에 저장된 값은 유효함
+        console.warn(`[AssetViewer] Server request failed, but local storage value is preserved.`, error);
+      }
+    } finally {
+      setIsLiking(false);
     }
   };
 
   const handleSubmitComment = async () => {
-    if (!commentText.trim() || !postId || isSubmittingComment) return;
+    if (!commentText.trim() || !postId || isSubmittingComment || !post) return;
 
     setIsSubmittingComment(true);
+    
+    // 낙관적 UI 업데이트
+    const previousCommentsCount = post.commentsCount;
+    const newCommentsCount = post.commentsCount + 1;
+    
+    // 낙관적 업데이트 적용
+    const optimisticPost = { ...post, commentsCount: newCommentsCount };
+    setPost(optimisticPost);
+    
+    // 로컬 스토리지에 먼저 저장 (로컬 스토리지가 source of truth)
+    await StorageService.savePostCounts(postId, {
+      likesCount: post.likesCount,
+      commentsCount: newCommentsCount,
+    });
+    
+    // 전역 캐시 업데이트
+    updatePostInCache(postId, optimisticPost);
+    
     try {
-      const newComment = await api.createComment(postId, commentText.trim());
+      // 서버에 요청은 보내지만, 응답은 참고만 하고 로컬 스토리지 값을 우선 사용
+      const { comment: newComment, post: serverPost } = await api.createComment(postId, commentText.trim());
+      
+      console.log(`[AssetViewer] Server response for comment on post ${postId}:`, {
+        commentsCount: serverPost.commentsCount,
+      });
+      
+      // 서버 응답과 로컬 스토리지 값 비교
+      // 로컬 스토리지 값이 더 신뢰할 수 있으므로 로컬 스토리지 값을 사용
+      if (Math.abs(serverPost.commentsCount - newCommentsCount) > 1) {
+        console.warn(`[AssetViewer] Server response differs significantly from local storage. Using local storage value.`, {
+          local: newCommentsCount,
+          server: serverPost.commentsCount,
+        });
+      }
+      
+      // 댓글 목록 업데이트
       setComments([newComment, ...comments]);
       setCommentText('');
-
-      // 트리거가 업데이트한 댓글 카운트를 반영하기 위해 post 재조회
-      if (post) {
-        const updatedPost = await api.getPost(postId);
-        setPost(updatedPost);
-      }
+      
+      // 로컬 스토리지 값을 사용 (이미 저장됨)
+      // UI는 이미 낙관적 업데이트로 업데이트되었고, 로컬 스토리지에도 저장되었음
     } catch (error) {
       console.error('Failed to create comment:', error);
+      // 에러가 발생해도 로컬 스토리지 값은 이미 저장되었으므로 유지
+      // 네트워크 에러 등으로 서버 요청이 실패해도 로컬 스토리지 값 사용
+      console.warn(`[AssetViewer] Server request failed, but local storage value is preserved.`, error);
     } finally {
       setIsSubmittingComment(false);
     }
@@ -289,30 +421,91 @@ export default function AssetViewerScreen() {
     `;
   };
 
-  const renderComment = ({ item }: { item: Comment }) => (
-    <View style={styles.commentItem}>
-      <TouchableOpacity onPress={() => router.push(`/user/${item.user.id}`)}>
-        <Image
-          source={{ uri: item.user.profileImage || 'https://cdn-luma.com/public/avatars/avatar-default.jpg' }}
-          style={styles.commentAvatar}
-        />
-      </TouchableOpacity>
-      <View style={styles.commentContent}>
-        <View style={styles.commentHeader}>
-          <TouchableOpacity onPress={() => router.push(`/user/${item.user.id}`)}>
-            <Text style={styles.commentUsername}>{item.user.username}</Text>
-          </TouchableOpacity>
-          <Text style={styles.commentTime}>
-            {new Date(item.createdAt).toLocaleDateString('ko-KR', {
-              month: 'short',
-              day: 'numeric',
-            })}
-          </Text>
+  const handleDeleteComment = async (commentId: string) => {
+    if (!post) return;
+
+    // 낙관적 UI 업데이트
+    const previousCommentsCount = post.commentsCount;
+    const previousComments = [...comments];
+    const newCommentsCount = Math.max(0, post.commentsCount - 1);
+    
+    // 낙관적 업데이트 적용
+    const optimisticPost = { ...post, commentsCount: newCommentsCount };
+    setPost(optimisticPost);
+    setComments(comments.filter(comment => comment.id !== commentId));
+
+    // 로컬 스토리지에 먼저 저장 (로컬 스토리지가 source of truth)
+    await StorageService.savePostCounts(post.id, {
+      likesCount: post.likesCount,
+      commentsCount: newCommentsCount,
+    });
+    
+    // 전역 캐시 업데이트
+    updatePostInCache(post.id, optimisticPost);
+
+    try {
+      // 서버에 요청은 보내지만, 응답은 참고만 하고 로컬 스토리지 값을 우선 사용
+      const serverPost = await api.deleteComment(commentId);
+      
+      console.log(`[AssetViewer] Server response for delete comment on post ${post.id}:`, {
+        commentsCount: serverPost.commentsCount,
+      });
+      
+      // 서버 응답과 로컬 스토리지 값 비교
+      // 로컬 스토리지 값이 더 신뢰할 수 있으므로 로컬 스토리지 값을 사용
+      if (Math.abs(serverPost.commentsCount - newCommentsCount) > 1) {
+        console.warn(`[AssetViewer] Server response differs significantly from local storage. Using local storage value.`, {
+          local: newCommentsCount,
+          server: serverPost.commentsCount,
+        });
+      }
+      
+      // 로컬 스토리지 값을 사용 (이미 저장됨)
+      // UI는 이미 낙관적 업데이트로 업데이트되었고, 로컬 스토리지에도 저장되었음
+    } catch (error) {
+      console.error('Failed to delete comment:', error);
+      // 에러가 발생해도 로컬 스토리지 값은 이미 저장되었으므로 유지
+      // 네트워크 에러 등으로 서버 요청이 실패해도 로컬 스토리지 값 사용
+      console.warn(`[AssetViewer] Server request failed, but local storage value is preserved.`, error);
+    }
+  };
+
+  const renderComment = ({ item }: { item: Comment }) => {
+    const isOwnComment = user?.id === item.userId;
+    
+    return (
+      <View style={styles.commentItem}>
+        <TouchableOpacity onPress={() => router.push(`/user/${item.user.id}`)}>
+          <Image
+            source={{ uri: item.user.profileImage || 'https://cdn-luma.com/public/avatars/avatar-default.jpg' }}
+            style={styles.commentAvatar}
+          />
+        </TouchableOpacity>
+        <View style={styles.commentContent}>
+          <View style={styles.commentHeader}>
+            <TouchableOpacity onPress={() => router.push(`/user/${item.user.id}`)}>
+              <Text style={styles.commentUsername}>{item.user.username}</Text>
+            </TouchableOpacity>
+            <Text style={styles.commentTime}>
+              {new Date(item.createdAt).toLocaleDateString('ko-KR', {
+                month: 'short',
+                day: 'numeric',
+              })}
+            </Text>
+            {isOwnComment && (
+              <TouchableOpacity
+                onPress={() => handleDeleteComment(item.id)}
+                style={styles.deleteButton}
+              >
+                <Ionicons name="trash-outline" size={16} color="#EF4444" />
+              </TouchableOpacity>
+            )}
+          </View>
+          <Text style={styles.commentText}>{item.content}</Text>
         </View>
-        <Text style={styles.commentText}>{item.content}</Text>
       </View>
-    </View>
-  );
+    );
+  };
 
   if (isLoading || !post) {
     return (
@@ -693,6 +886,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 4,
     gap: 8,
+  },
+  deleteButton: {
+    marginLeft: 'auto',
+    padding: 4,
   },
   commentUsername: {
     fontSize: 14,

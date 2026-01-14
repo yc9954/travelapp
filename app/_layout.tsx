@@ -7,6 +7,7 @@ import * as SplashScreen from 'expo-splash-screen';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { PostProvider } from '../contexts/PostContext';
 import CustomSplashScreen from '../components/SplashScreen';
 
 // 네이티브 스플래시 자동 숨김 방지
@@ -52,7 +53,9 @@ function RootNavigator() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <RootNavigator />
+      <PostProvider>
+        <RootNavigator />
+      </PostProvider>
     </AuthProvider>
   );
 }

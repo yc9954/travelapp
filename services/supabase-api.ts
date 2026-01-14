@@ -261,21 +261,42 @@ export const SupabaseAPI = {
       throw error;
     }
 
+    // 로컬 스토리지에서 좋아요 상태 확인 (빠른 응답)
+    const { StorageService } = await import('./storage');
+    const likesState = await StorageService.getLikesState();
+    
     // Check if current user liked each post
     if (user) {
       const postIds = data.map(p => p.id);
-      const { data: likes } = await supabase
-        .from('likes')
-        .select('post_id')
-        .eq('user_id', user.id)
-        .in('post_id', postIds);
+      
+      // 로컬에 없는 post만 DB에서 조회
+      const postsToCheck = postIds.filter(id => likesState[id] === undefined);
+      
+      if (postsToCheck.length > 0) {
+        const { data: likes } = await supabase
+          .from('likes')
+          .select('post_id')
+          .eq('user_id', user.id)
+          .in('post_id', postsToCheck);
 
-      const likedPostIds = new Set(likes?.map(l => l.post_id) || []);
+        const likedPostIds = new Set(likes?.map(l => l.post_id) || []);
+        
+        // DB에서 확인한 값을 로컬에 저장
+        const newLikesState: Record<string, boolean> = {};
+        postsToCheck.forEach(postId => {
+          const isLiked = likedPostIds.has(postId);
+          newLikesState[postId] = isLiked;
+        });
+        await StorageService.saveLikesState({ ...likesState, ...newLikesState });
+      }
 
-      return data.map(post => convertPost({
-        ...post,
-        user_liked: likedPostIds.has(post.id),
-      }));
+      return data.map(post => {
+        const isLiked = likesState[post.id] ?? false;
+        return convertPost({
+          ...post,
+          user_liked: isLiked,
+        });
+      });
     }
 
     return data.map(post => convertPost(post));
@@ -315,7 +336,7 @@ export const SupabaseAPI = {
     return data.map(post => convertPost(post));
   },
 
-  async getPost(postId: string): Promise<Post> {
+  async getPost(postId: string, forceRefreshLikeState: boolean = false): Promise<Post> {
     const { data: { user } } = await supabase.auth.getUser();
 
     const { data, error } = await supabase
@@ -329,17 +350,45 @@ export const SupabaseAPI = {
 
     if (error) throw error;
 
-    // Check if current user liked this post
+    // 좋아요 상태 확인
     let isLiked = false;
+    
     if (user) {
-      const { data: like } = await supabase
-        .from('likes')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('post_id', postId)
-        .single();
+      // 강제 새로고침이면 항상 DB에서 확인
+      if (forceRefreshLikeState) {
+        const { data: like } = await supabase
+          .from('likes')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('post_id', postId)
+          .single();
 
-      isLiked = !!like;
+        isLiked = !!like;
+        // DB에서 확인한 값을 로컬에 저장
+        const { StorageService } = await import('./storage');
+        await StorageService.saveLikeState(postId, isLiked);
+      } else {
+        // 로컬 스토리지에서 확인
+        const { StorageService } = await import('./storage');
+        const cachedLikeState = await StorageService.getLikeState(postId);
+        
+        if (cachedLikeState === null) {
+          // 로컬에 없으면 DB에서 확인
+          const { data: like } = await supabase
+            .from('likes')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('post_id', postId)
+            .single();
+
+          isLiked = !!like;
+          // DB에서 확인한 값을 로컬에 저장
+          await StorageService.saveLikeState(postId, isLiked);
+        } else {
+          // 로컬 스토리지 값 사용
+          isLiked = cachedLikeState;
+        }
+      }
     }
 
     return convertPost({ ...data, user_liked: isLiked });
@@ -382,10 +431,11 @@ export const SupabaseAPI = {
 
   // ==================== Likes ====================
 
-  async likePost(postId: string) {
+  async likePost(postId: string, expectedPreviousCount?: number): Promise<Post> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
+    // 좋아요 INSERT
     const { error } = await supabase
       .from('likes')
       .insert({
@@ -393,20 +443,88 @@ export const SupabaseAPI = {
         post_id: postId,
       });
 
-    if (error) throw error;
+    // 중복 키 오류는 무시하고 현재 Post 반환 (이미 좋아요가 있는 경우)
+    if (error) {
+      if (error.code === '23505') {
+        // 이미 좋아요가 있는 경우 현재 Post 반환 (좋아요 상태 강제 새로고침)
+        return await this.getPost(postId, true);
+      }
+      throw error;
+    }
+
+    // 트리거가 완료될 때까지 재시도 (최대 10번, 50ms 간격)
+    // 실제 likes 테이블의 개수를 세어서 정확한 값 확인
+    for (let i = 0; i < 10; i++) {
+      await new Promise(resolve => setTimeout(resolve, 50 * (i + 1)));
+      
+      // 실제 likes 테이블에서 개수 조회
+      const { count: actualLikesCount } = await supabase
+        .from('likes')
+        .select('*', { count: 'exact', head: true })
+        .eq('post_id', postId);
+      
+      // posts 테이블의 likes_count 조회
+      const { data: postData } = await supabase
+        .from('posts')
+        .select('likes_count')
+        .eq('id', postId)
+        .single();
+      
+      // 트리거가 완료되었는지 확인 (실제 개수와 posts 테이블의 값이 일치하는지)
+      if (postData && actualLikesCount !== null && postData.likes_count === actualLikesCount) {
+        // 트리거 완료 확인됨, 전체 Post 정보 조회 (좋아요 상태 강제 새로고침)
+        return await this.getPost(postId, true);
+      }
+    }
+
+    // 재시도 후에도 트리거가 완료되지 않았으면 마지막 조회 결과 반환 (좋아요 상태 강제 새로고침)
+    return await this.getPost(postId, true);
   },
 
-  async unlikePost(postId: string) {
+  async unlikePost(postId: string, expectedPreviousCount?: number): Promise<Post> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
+    // 좋아요 DELETE
     const { error } = await supabase
       .from('likes')
       .delete()
       .eq('user_id', user.id)
       .eq('post_id', postId);
 
-    if (error) throw error;
+    // 삭제할 좋아요가 없어도 에러가 아니므로 무시하고 현재 Post 반환
+    if (error) {
+      // 좋아요가 없는 경우도 정상 처리 (좋아요 상태 강제 새로고침)
+      return await this.getPost(postId, true);
+    }
+
+    // 트리거가 완료될 때까지 재시도 (최대 10번, 50ms 간격)
+    // 실제 likes 테이블의 개수를 세어서 정확한 값 확인
+    for (let i = 0; i < 10; i++) {
+      await new Promise(resolve => setTimeout(resolve, 50 * (i + 1)));
+      
+      // 실제 likes 테이블에서 개수 조회
+      const { count: actualLikesCount } = await supabase
+        .from('likes')
+        .select('*', { count: 'exact', head: true })
+        .eq('post_id', postId);
+      
+      // posts 테이블의 likes_count 조회
+      const { data: postData } = await supabase
+        .from('posts')
+        .select('likes_count')
+        .eq('id', postId)
+        .single();
+      
+      // 트리거가 완료되었는지 확인 (실제 개수와 posts 테이블의 값이 일치하는지)
+      if (postData && actualLikesCount !== null && postData.likes_count === actualLikesCount) {
+        // 트리거 완료 확인됨, 전체 Post 정보 조회 (좋아요 상태 강제 새로고침)
+        return await this.getPost(postId, true);
+      }
+    }
+
+    // 재시도 후에도 트리거가 완료되지 않았으면 마지막 조회 결과 반환 (좋아요 상태 강제 새로고침)
+    return await this.getPost(postId, true);
   },
 
   async getPostLikes(postId: string): Promise<User[]> {
@@ -446,10 +564,11 @@ export const SupabaseAPI = {
     }));
   },
 
-  async createComment(postId: string, text: string): Promise<Comment> {
+  async createComment(postId: string, text: string): Promise<{ comment: Comment; post: Post }> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
+    // 댓글 INSERT
     const { data, error } = await supabase
       .from('comments')
       .insert({
@@ -465,7 +584,7 @@ export const SupabaseAPI = {
 
     if (error) throw error;
 
-    return {
+    const comment: Comment = {
       id: data.id,
       userId: data.user_id,
       user: convertProfile(data.profiles as any),
@@ -473,15 +592,85 @@ export const SupabaseAPI = {
       content: data.text,
       createdAt: data.created_at,
     };
+
+    // 트리거가 완료될 때까지 재시도 (최대 10번, 50ms 간격)
+    // 실제 comments 테이블의 개수를 세어서 정확한 값 확인
+    for (let i = 0; i < 10; i++) {
+      await new Promise(resolve => setTimeout(resolve, 50 * (i + 1)));
+      
+      // 실제 comments 테이블에서 개수 조회
+      const { count: actualCommentsCount } = await supabase
+        .from('comments')
+        .select('*', { count: 'exact', head: true })
+        .eq('post_id', postId);
+      
+      // posts 테이블의 comments_count 조회
+      const { data: postData } = await supabase
+        .from('posts')
+        .select('comments_count')
+        .eq('id', postId)
+        .single();
+      
+      // 트리거가 완료되었는지 확인 (실제 개수와 posts 테이블의 값이 일치하는지)
+      if (postData && actualCommentsCount !== null && postData.comments_count === actualCommentsCount) {
+        // 트리거 완료 확인됨, 전체 Post 정보 조회
+        const post = await this.getPost(postId);
+        return { comment, post };
+      }
+    }
+
+    // 재시도 후에도 트리거가 완료되지 않았으면 마지막 조회 결과 반환
+    const post = await this.getPost(postId);
+    return { comment, post };
   },
 
-  async deleteComment(commentId: string) {
+  async deleteComment(commentId: string): Promise<Post> {
+    // 댓글 삭제 전에 post_id 조회
+    const { data: commentData } = await supabase
+      .from('comments')
+      .select('post_id')
+      .eq('id', commentId)
+      .single();
+
+    if (!commentData) throw new Error('Comment not found');
+
+    const postId = commentData.post_id;
+
+    // 댓글 DELETE
     const { error } = await supabase
       .from('comments')
       .delete()
       .eq('id', commentId);
 
     if (error) throw error;
+
+    // 트리거가 완료될 때까지 재시도 (최대 10번, 50ms 간격)
+    // 실제 comments 테이블의 개수를 세어서 정확한 값 확인
+    for (let i = 0; i < 10; i++) {
+      await new Promise(resolve => setTimeout(resolve, 50 * (i + 1)));
+      
+      // 실제 comments 테이블에서 개수 조회
+      const { count: actualCommentsCount } = await supabase
+        .from('comments')
+        .select('*', { count: 'exact', head: true })
+        .eq('post_id', postId);
+      
+      // posts 테이블의 comments_count 조회
+      const { data: postData } = await supabase
+        .from('posts')
+        .select('comments_count')
+        .eq('id', postId)
+        .single();
+      
+      // 트리거가 완료되었는지 확인 (실제 개수와 posts 테이블의 값이 일치하는지)
+      if (postData && actualCommentsCount !== null && postData.comments_count === actualCommentsCount) {
+        // 트리거 완료 확인됨, 전체 Post 정보 조회
+        return await this.getPost(postId, false);
+      }
+    }
+
+    // 재시도 후에도 트리거가 완료되지 않았으면 마지막 조회 결과 반환
+    return await this.getPost(postId, false);
   },
 
   // ==================== Follows ====================

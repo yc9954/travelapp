@@ -12,8 +12,11 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { InteractiveSceneCard } from '../../components/InteractiveSceneCard';
 import { api } from '../../services/api';
+import { getPostFromCache, setPostInCache } from '../../contexts/PostContext';
+import { StorageService } from '../../services/storage';
 import type { Post } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -81,10 +84,132 @@ export default function FeedScreen() {
     loadFeed();
   }, []);
 
+  // 화면이 포커스될 때마다 캐시된 post와 로컬 스토리지 업데이트 반영
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!isLoading && posts.length > 0) {
+        // 로컬 스토리지에서 카운트와 좋아요 상태 조회
+        StorageService.getPostCounts().then(postCounts => {
+          StorageService.getLikesState().then(likesState => {
+            setPosts(currentPosts => {
+              // 캐시된 post나 로컬 스토리지 값이 있으면 즉시 업데이트
+              const updatedPosts = currentPosts.map(post => {
+                const cachedPost = getPostFromCache(post.id);
+                const storedCounts = postCounts[post.id];
+                const storedLikeState = likesState[post.id];
+                
+                // 우선순위: 캐시 > 로컬 스토리지 > 현재 값
+                if (cachedPost) {
+                  // 캐시 값이 있으면 무조건 캐시 값 사용 (최신 업데이트 반영)
+                  return {
+                    ...post,
+                    likesCount: cachedPost.likesCount,
+                    commentsCount: cachedPost.commentsCount,
+                    isLiked: cachedPost.isLiked,
+                  };
+                } else if (storedCounts || storedLikeState !== undefined) {
+                  // 로컬 스토리지 값 사용
+                  return {
+                    ...post,
+                    likesCount: storedCounts?.likesCount ?? post.likesCount,
+                    commentsCount: storedCounts?.commentsCount ?? post.commentsCount,
+                    isLiked: storedLikeState ?? post.isLiked,
+                  };
+                }
+                // 둘 다 없으면 현재 post 값 유지
+                return post;
+              });
+              // 변경사항이 있는지 확인
+              const hasChanges = updatedPosts.some((post, index) => {
+                const original = currentPosts[index];
+                return post.likesCount !== original.likesCount ||
+                       post.commentsCount !== original.commentsCount ||
+                       post.isLiked !== original.isLiked;
+              });
+              return hasChanges ? updatedPosts : currentPosts;
+            });
+          });
+        });
+      }
+    }, [isLoading, posts.length])
+  );
+
   const loadFeed = async () => {
     try {
+      // 먼저 좋아요 상태 일관성 검증 및 수정
+      await StorageService.validateAndFixLikeState();
+      
       const data = await api.getFeed();
-      setPosts(data);
+      // 로컬 스토리지에서 카운트와 좋아요 상태 조회
+      const postCounts = await StorageService.getPostCounts();
+      const likesState = await StorageService.getLikesState();
+      
+      // 첫 로드 여부 확인: 로컬 스토리지에 데이터가 있는지 확인
+      const isFirstLoad = Object.keys(postCounts).length === 0 && Object.keys(likesState).length === 0;
+      
+      const updatedData = await Promise.all(
+        data.map(async post => {
+          const cachedPost = getPostFromCache(post.id);
+          const storedCounts = postCounts[post.id];
+          const storedLikeState = likesState[post.id];
+          
+          let finalPost = { ...post };
+          
+          // 우선순위 1: 캐시에 최근 업데이트한 값이 있으면 그것 사용 (내가 방금 업데이트한 경우)
+          if (cachedPost) {
+            finalPost = {
+              ...finalPost,
+              likesCount: cachedPost.likesCount,
+              commentsCount: cachedPost.commentsCount,
+              isLiked: cachedPost.isLiked,
+            };
+          } else if (isFirstLoad) {
+            // 첫 로드: 서버 값으로 로컬 스토리지 초기화
+            console.log(`[Feed] First load: Initializing local storage with server values for post ${post.id}`);
+            await StorageService.savePostCounts(post.id, {
+              likesCount: post.likesCount,
+              commentsCount: post.commentsCount,
+            });
+            await StorageService.saveLikeState(post.id, post.isLiked);
+            finalPost = {
+              ...finalPost,
+              likesCount: post.likesCount,
+              commentsCount: post.commentsCount,
+              isLiked: post.isLiked,
+            };
+          } else {
+            // 이후 로드: 로컬 스토리지 값 사용
+            if (storedCounts) {
+              console.log(`[Feed] Using stored counts for post ${post.id}:`, storedCounts);
+              finalPost = {
+                ...finalPost,
+                likesCount: storedCounts.likesCount,
+                commentsCount: storedCounts.commentsCount,
+              };
+            }
+            if (storedLikeState !== undefined) {
+              console.log(`[Feed] Using stored like state for post ${post.id}:`, storedLikeState);
+              finalPost = {
+                ...finalPost,
+                isLiked: storedLikeState,
+              };
+            }
+          }
+          
+          // 최종 검증: likesCount가 0인데 isLiked가 true인 경우 수정
+          if (finalPost.likesCount === 0 && finalPost.isLiked === true) {
+            console.log(`[Feed] Fixing inconsistent state: post ${post.id} has 0 likes but is marked as liked`);
+            finalPost.isLiked = false;
+            await StorageService.saveLikeState(post.id, false);
+          }
+          
+          // 캐시에 저장
+          setPostInCache(post.id, finalPost);
+          
+          return finalPost;
+        })
+      );
+      setPosts(updatedData);
     } catch (error) {
       console.error('Failed to load feed:', error);
     } finally {
@@ -110,7 +235,21 @@ export default function FeedScreen() {
     );
   }
 
-  const featuredPost = posts.length > 0 ? posts[0] : null;
+  // featuredPost도 캐시와 로컬 스토리지에서 업데이트
+  const featuredPost = posts.length > 0 ? (() => {
+    const post = posts[0];
+    const cachedPost = getPostFromCache(post.id);
+    if (cachedPost) {
+      return {
+        ...post,
+        likesCount: cachedPost.likesCount,
+        commentsCount: cachedPost.commentsCount,
+        isLiked: cachedPost.isLiked,
+      };
+    }
+    // 캐시가 없으면 이미 posts에 로컬 스토리지 값이 반영되어 있음
+    return post;
+  })() : null;
 
   return (
     <View style={styles.container}>
