@@ -146,22 +146,36 @@ class ApiService {
   async followUser(userId: string, currentUserId: string): Promise<void> {
     await SupabaseAPI.followUser(userId, currentUserId);
 
-    // Update local user data
+    // 트리거가 카운트를 업데이트하므로, 프로필을 다시 조회하여 정확한 카운트 반영
     const userData = await StorageService.getUserData();
     if (userData && userData.id === currentUserId) {
-      userData.followingCount = (userData.followingCount || 0) + 1;
-      await StorageService.saveUserData(userData);
+      try {
+        const updatedProfile = await SupabaseAPI.getProfile(currentUserId);
+        await StorageService.saveUserData(updatedProfile);
+      } catch (error) {
+        console.error('Failed to refresh profile after follow:', error);
+        // 실패하면 낙관적 업데이트로 폴백
+        userData.followingCount = (userData.followingCount || 0) + 1;
+        await StorageService.saveUserData(userData);
+      }
     }
   }
 
   async unfollowUser(userId: string, currentUserId: string): Promise<void> {
     await SupabaseAPI.unfollowUser(userId, currentUserId);
 
-    // Update local user data
+    // 트리거가 카운트를 업데이트하므로, 프로필을 다시 조회하여 정확한 카운트 반영
     const userData = await StorageService.getUserData();
     if (userData && userData.id === currentUserId) {
-      userData.followingCount = Math.max(0, (userData.followingCount || 1) - 1);
-      await StorageService.saveUserData(userData);
+      try {
+        const updatedProfile = await SupabaseAPI.getProfile(currentUserId);
+        await StorageService.saveUserData(updatedProfile);
+      } catch (error) {
+        console.error('Failed to refresh profile after unfollow:', error);
+        // 실패하면 낙관적 업데이트로 폴백
+        userData.followingCount = Math.max(0, (userData.followingCount || 1) - 1);
+        await StorageService.saveUserData(userData);
+      }
     }
   }
 

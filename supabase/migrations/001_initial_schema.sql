@@ -149,7 +149,8 @@ BEGIN
     COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'avatar_url', NEW.raw_user_meta_data->>'picture')
-  );
+  )
+  ON CONFLICT (id) DO NOTHING;  -- 중복 프로필 생성 방지
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
