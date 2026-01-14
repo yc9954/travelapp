@@ -106,7 +106,23 @@ class KiriService {
         }
       );
 
-      if (!response.data.ok || response.data.code !== 0) {
+      // Debug: Log response to understand the structure
+      console.log('KIRI API Response:', JSON.stringify(response.data, null, 2));
+
+      // Check if response indicates success
+      // KIRI API may return success in different ways:
+      // - code === 0 (success)
+      // - ok === true (success)
+      // - msg === "success" (success)
+      // - HTTP status 200-299 (success)
+      const isSuccess = 
+        response.status >= 200 && response.status < 300 &&
+        (response.data.code === 0 || 
+         response.data.ok === true || 
+         response.data.msg?.toLowerCase() === 'success' ||
+         response.data.data?.serialize);
+
+      if (!isSuccess) {
         throw new Error(response.data.msg || 'Failed to upload video');
       }
 
@@ -150,9 +166,103 @@ class KiriService {
       };
     } catch (error: any) {
       console.error('KIRI Engine upload error:', error);
+      
+      // If error message is "success", it's likely a false positive
+      // Check if the response actually indicates success
       if (error.response) {
-        throw new Error(`KIRI Engine API error: ${error.response.data?.msg || error.response.statusText}`);
+        const responseData = error.response.data;
+        const status = error.response.status;
+        
+        // If HTTP status is 200-299 and we have a serialize, it's actually a success
+        if (status >= 200 && status < 300 && responseData?.data?.serialize) {
+          console.log('Response indicates success despite error handling, proceeding...');
+          
+          // Create task record in Supabase if userId is provided
+          let taskId: string | undefined;
+          if (userId && SUPABASE_URL) {
+            try {
+              const { data: task, error } = await supabase
+                .from('kiri_tasks')
+                .insert({
+                  user_id: userId,
+                  serialize: responseData.data.serialize,
+                  video_uri: request.videoFile,
+                  status: 'pending',
+                  metadata: {
+                    modelQuality: request.modelQuality,
+                    textureQuality: request.textureQuality,
+                    fileFormat: request.fileFormat,
+                    isMask: request.isMask,
+                    textureSmoothing: request.textureSmoothing,
+                  },
+                })
+                .select()
+                .single();
+
+              if (!error && task) {
+                taskId = task.id;
+              }
+            } catch (dbError) {
+              console.error('Error creating task record:', dbError);
+            }
+          }
+          
+          // Return the successful response
+          return {
+            ...responseData,
+            taskId,
+          };
+        }
+        
+        // Check if msg is "success" - this might be a success response
+        if (responseData?.msg?.toLowerCase() === 'success' && responseData?.data?.serialize) {
+          console.log('Response msg is "success" with serialize, treating as success');
+          
+          // Create task record in Supabase if userId is provided
+          let taskId: string | undefined;
+          if (userId && SUPABASE_URL) {
+            try {
+              const { data: task, error } = await supabase
+                .from('kiri_tasks')
+                .insert({
+                  user_id: userId,
+                  serialize: responseData.data.serialize,
+                  video_uri: request.videoFile,
+                  status: 'pending',
+                  metadata: {
+                    modelQuality: request.modelQuality,
+                    textureQuality: request.textureQuality,
+                    fileFormat: request.fileFormat,
+                    isMask: request.isMask,
+                    textureSmoothing: request.textureSmoothing,
+                  },
+                })
+                .select()
+                .single();
+
+              if (!error && task) {
+                taskId = task.id;
+              }
+            } catch (dbError) {
+              console.error('Error creating task record:', dbError);
+            }
+          }
+          
+          // Return the successful response
+          return {
+            ...responseData,
+            taskId,
+          };
+        }
+        
+        throw new Error(`KIRI Engine API error: ${responseData?.msg || error.response.statusText}`);
       }
+      
+      // If error message itself is "success", it might be a false positive
+      if (error.message?.toLowerCase() === 'success') {
+        console.warn('Error message is "success" - this might be a false positive. Check API response structure.');
+      }
+      
       throw new Error(error.message || 'Failed to upload video to KIRI Engine');
     }
   }
