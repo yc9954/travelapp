@@ -273,43 +273,93 @@ class KiriService {
    * 
    * Note: The actual endpoint may vary. Check KIRI Engine API docs for the correct endpoint.
    * Common patterns: /open/photo/status/{serialize} or /open/photo/{serialize}
+   * 
+   * Note: KIRI API status endpoints may return 500 errors. In that case, 
+   * prefer using Supabase database or webhooks for status updates.
    */
   async checkTaskStatus(serialize: string): Promise<KiriTaskStatus> {
+    // First, try to get status from Supabase database (more reliable)
+    if (SUPABASE_URL) {
+      try {
+        const task = await this.getTaskFromDB(serialize);
+        if (task && task.status) {
+          return {
+            serialize,
+            status: task.status as 'pending' | 'processing' | 'completed' | 'failed',
+            progress: task.progress,
+            downloadUrl: task.download_url,
+            error: task.error_message,
+          };
+        }
+      } catch (dbError) {
+        // Continue to API check if DB fails
+        console.log('Could not get status from DB, trying API...');
+      }
+    }
+
+    // Fallback to API check (may fail with 500 errors)
     try {
       // Try common status endpoint patterns
       let response;
-      try {
-        response = await this.client.get(`/open/photo/status/${serialize}`);
-      } catch (e) {
-        // Try alternative endpoint
+      let lastError: any;
+      
+      const endpoints = [
+        `/open/photo/status/${serialize}`,
+        `/open/photo/${serialize}`,
+        `/open/model/${serialize}`,
+      ];
+
+      for (const endpoint of endpoints) {
         try {
-          response = await this.client.get(`/open/photo/${serialize}`);
-        } catch (e2) {
-          // Try model endpoint
-          response = await this.client.get(`/open/model/${serialize}`);
+          response = await this.client.get(endpoint);
+          if (response.status >= 200 && response.status < 300) {
+            break; // Success, exit loop
+          }
+        } catch (e: any) {
+          lastError = e;
+          // If it's a 500 error, log but don't throw yet - try next endpoint
+          if (e.response?.status === 500) {
+            console.warn(`KIRI API endpoint ${endpoint} returned 500, trying next...`);
+            continue;
+          }
+          // For other errors (404, 401, etc), continue to next endpoint
+          continue;
         }
       }
 
-      // Parse response based on KIRI Engine API format
-      const data = response.data?.data || response.data;
-      
-      return {
-        serialize,
-        status: this.mapStatus(data.status || data.state || 'processing'),
-        progress: data.progress || data.progressPercent,
-        downloadUrl: data.downloadUrl || data.url || data.modelUrl,
-        error: data.error || data.errorMessage,
-      };
+      // If we got a response, parse it
+      if (response && response.status >= 200 && response.status < 300) {
+        const data = response.data?.data || response.data;
+        
+        return {
+          serialize,
+          status: this.mapStatus(data.status || data.state || 'processing'),
+          progress: data.progress || data.progressPercent,
+          downloadUrl: data.downloadUrl || data.url || data.modelUrl,
+          error: data.error || data.errorMessage,
+        };
+      }
+
+      // If all endpoints failed, throw the last error
+      if (lastError) {
+        throw lastError;
+      }
     } catch (error: any) {
-      console.error('KIRI Engine status check error:', error);
-      
-      // If status endpoint doesn't exist, return processing status
-      // In production, use webhooks for real-time updates
-      return {
-        serialize,
-        status: 'processing',
-      };
+      // Log error but don't crash - return processing status
+      // 500 errors are common with KIRI API status endpoints
+      if (error.response?.status === 500) {
+        console.warn('KIRI Engine status API returned 500 error. Using webhooks/DB for status updates instead.');
+      } else {
+        console.error('KIRI Engine status check error:', error.message || error);
+      }
     }
+    
+    // Default: return processing status
+    // In production, use webhooks for real-time updates instead of polling
+    return {
+      serialize,
+      status: 'processing',
+    };
   }
 
   /**
