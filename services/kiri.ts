@@ -75,29 +75,25 @@ class KiriService {
         type: fileType,
       } as any);
 
-      // Add optional parameters
-      formData.append('modelQuality', String(request.modelQuality ?? 0));
-      formData.append('textureQuality', String(request.textureQuality ?? 0));
-      formData.append('fileFormat', request.fileFormat || 'OBJ');
+      // Add 3DGS scan parameters
+      // Reference: https://docs.kiriengine.app/3dgs-scan/video-upload
+      // isMesh: 0 = Turn off 3DGS to Mesh, 1 = Turn on 3DGS to Mesh
+      // If isMesh is 1, we can specify fileFormat (obj, fbx, stl, ply, glb, gltf, usdz, xyz)
+      const isMesh = request.fileFormat ? 1 : 0; // If fileFormat is specified, enable mesh generation
+      formData.append('isMesh', String(isMesh));
       formData.append('isMask', String(request.isMask ?? 0));
-      formData.append('textureSmoothing', String(request.textureSmoothing ?? 0));
       
-      // Set up webhook URL if Supabase is configured
-      // Use Supabase Edge Function as webhook endpoint
-      let webhookUrl = request.webhookUrl;
-      if (!webhookUrl && SUPABASE_URL && userId) {
-        // Use Supabase Edge Function for webhook
-        webhookUrl = `${SUPABASE_URL}/functions/v1/kiri-webhook`;
+      // Only add fileFormat if isMesh is enabled
+      if (isMesh === 1 && request.fileFormat) {
+        formData.append('fileFormat', request.fileFormat);
       }
       
-      // Add webhook URL if available
-      // Reference: https://docs.kiriengine.app/category/webhooks
-      if (webhookUrl) {
-        formData.append('webhookUrl', webhookUrl);
-      }
+      // Note: Webhook URL cannot be set in upload request
+      // Webhooks must be configured separately via KIRI Engine dashboard or API
+      // Reference: https://docs.kiriengine.app/webhooks/creating-webhooks
 
       const response = await this.client.post<KiriVideoUploadResponse>(
-        '/open/photo/video',
+        '/open/3dgs/video', // Use 3DGS endpoint instead of photo scan endpoint
         formData,
         {
           headers: {
@@ -138,11 +134,9 @@ class KiriService {
               video_uri: request.videoFile,
               status: 'pending',
               metadata: {
-                modelQuality: request.modelQuality,
-                textureQuality: request.textureQuality,
                 fileFormat: request.fileFormat,
                 isMask: request.isMask,
-                textureSmoothing: request.textureSmoothing,
+                isMesh: request.fileFormat ? 1 : 0, // isMesh is enabled if fileFormat is specified
               },
             })
             .select()
@@ -189,11 +183,9 @@ class KiriService {
                   video_uri: request.videoFile,
                   status: 'pending',
                   metadata: {
-                    modelQuality: request.modelQuality,
-                    textureQuality: request.textureQuality,
                     fileFormat: request.fileFormat,
                     isMask: request.isMask,
-                    textureSmoothing: request.textureSmoothing,
+                    isMesh: request.fileFormat ? 1 : 0, // isMesh is enabled if fileFormat is specified
                   },
                 })
                 .select()
@@ -230,11 +222,9 @@ class KiriService {
                   video_uri: request.videoFile,
                   status: 'pending',
                   metadata: {
-                    modelQuality: request.modelQuality,
-                    textureQuality: request.textureQuality,
                     fileFormat: request.fileFormat,
                     isMask: request.isMask,
-                    textureSmoothing: request.textureSmoothing,
+                    isMesh: request.fileFormat ? 1 : 0, // isMesh is enabled if fileFormat is specified
                   },
                 })
                 .select()

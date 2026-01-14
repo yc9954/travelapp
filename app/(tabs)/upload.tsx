@@ -124,15 +124,13 @@ export default function UploadScreen() {
           // Optional: Set webhook URL if you have a backend server
           // const webhookUrl = 'https://your-backend.com/api/webhooks/kiri';
           
-          // Upload video to KIRI Engine
-          // If user is logged in, task will be saved to Supabase and webhook will be set up automatically
+          // Upload video to KIRI Engine (3DGS Scan)
+          // If user is logged in, task will be saved to Supabase
+          // Note: Webhook must be configured separately via KIRI Engine dashboard
           const uploadResponse = await kiriService.uploadVideo({
             videoFile: videoUri,
-            modelQuality: 0, // High quality
-            textureQuality: 0, // 4K
-            fileFormat: 'glb', // GLB format for web viewing
+            fileFormat: 'glb', // GLB format for web viewing (enables isMesh=1)
             isMask: 1, // Enable auto object masking
-            textureSmoothing: 1, // Enable texture smoothing
           }, user?.id);
 
           // Navigate to processing screen
