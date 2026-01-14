@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { api } from '../services/api';
 import { SupabaseAPI } from '../services/supabase-api';
 import { StorageService } from '../services/storage';
 import { supabase } from '../lib/supabase';
@@ -160,14 +159,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (data: LoginRequest) => {
     try {
       console.log('🔑 Logging in with email...');
-      // 로그인 전에 기존 세션 클리어 (충돌 방지)
-      await supabase.auth.signOut({ scope: 'local' });
-
-      const response = await api.login(data);
-      await StorageService.saveAuthToken(response.token);
-      await StorageService.saveUserData(response.user);
-      setUser(response.user);
-      console.log('✅ Login successful');
+      // SupabaseAPI를 직접 호출하여 중복 프로필 조회 방지
+      // onAuthStateChange 리스너가 프로필을 자동으로 로드함
+      await SupabaseAPI.signInWithEmail(data.email, data.password);
+      console.log('✅ Login successful - profile will be loaded by auth listener');
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -176,10 +171,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = async (data: RegisterRequest) => {
     try {
-      const response = await api.register(data);
-      await StorageService.saveAuthToken(response.token);
-      await StorageService.saveUserData(response.user);
-      setUser(response.user);
+      console.log('📝 Registering new user...');
+      // SupabaseAPI를 직접 호출하여 중복 프로필 조회 방지
+      // 트리거가 자동으로 프로필을 생성하고, onAuthStateChange 리스너가 로드함
+      await SupabaseAPI.signUpWithEmail(data.email, data.password, data.username);
+      console.log('✅ Registration successful - profile will be created by trigger and loaded by auth listener');
     } catch (error) {
       console.error('Register error:', error);
       throw error;

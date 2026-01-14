@@ -108,8 +108,8 @@ export const SupabaseAPI = {
 
   // ==================== Profile ====================
 
-  async getProfile(userId: string, userMetadata?: any): Promise<User> {
-    console.log('📋 Getting profile for user:', userId);
+  async getProfile(userId: string, userMetadata?: any, retryCount: number = 0): Promise<User> {
+    console.log('📋 Getting profile for user:', userId, retryCount > 0 ? `(retry ${retryCount})` : '');
     const startTime = Date.now();
 
     const { data, error } = await supabase
@@ -128,64 +128,28 @@ export const SupabaseAPI = {
 
     // PGRST116: 프로필이 없는 경우 (0 rows)
     if (error && error.code === 'PGRST116') {
-      console.log('⚠️ Profile not found, creating new profile for user:', userId);
-      const createStartTime = Date.now();
-
-      // userMetadata가 제공되면 사용, 아니면 현재 사용자 정보 가져오기
-      let user = userMetadata;
-      if (!user) {
-        console.log('🔍 Fetching user metadata...');
-        const { data: { user: fetchedUser }, error: userError } = await supabase.auth.getUser();
-
-        if (userError || !fetchedUser) {
-          throw new Error('Cannot create profile: User not authenticated');
-        }
-        user = fetchedUser;
-        console.log(`⏱️ User fetch took ${Date.now() - createStartTime}ms`);
-      } else {
-        console.log('✅ Using provided user metadata');
+      // 트리거가 프로필을 생성하는 동안 짧은 지연 후 재시도 (최대 3번)
+      if (retryCount < 3) {
+        const delay = 300 * (retryCount + 1); // 300ms, 600ms, 900ms
+        console.log(`⚠️ Profile not found, waiting ${delay}ms for trigger to create profile...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.getProfile(userId, userMetadata, retryCount + 1);
       }
 
-      // 새 프로필 생성
-      const username = user.user_metadata?.full_name
-        || user.user_metadata?.name
-        || user.user_metadata?.username
-        || user.email?.split('@')[0]
-        || 'user';
-
-      const insertStartTime = Date.now();
-      const { data: newProfile, error: createError } = await supabase
-        .from('profiles')
-        .insert({
-          id: userId,
-          username: username,
-          email: user.email || '',
-          profile_image: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
-          bio: user.user_metadata?.bio || '',
-          followers_count: 0,
-          following_count: 0,
-          posts_count: 0,
-        })
-        .select()
-        .single();
-
-      console.log(`⏱️ Profile insert took ${Date.now() - insertStartTime}ms`);
-
-      if (createError) {
-        console.error('Failed to create profile:', createError);
-        throw createError;
-      }
-
-      console.log(`✅ Profile created successfully in ${Date.now() - createStartTime}ms`);
-      return convertProfile(newProfile);
+      // 재시도 후에도 프로필이 없으면 에러
+      console.error('❌ Profile not found after retries. Trigger may have failed.');
+      throw new Error(
+        '프로필을 불러올 수 없습니다.\n\n' +
+        '회원가입이 완료되지 않았을 수 있습니다. 다시 로그인해주세요.'
+      );
     }
 
     // 네트워크 에러 감지
-    const isNetworkError = error.message?.includes('Network request failed') || 
+    const isNetworkError = error.message?.includes('Network request failed') ||
                           error.message?.includes('fetch failed') ||
                           error.message?.includes('network') ||
                           !error.code;
-    
+
     if (isNetworkError) {
       console.error('🌐 네트워크 연결 오류 (getProfile):', error.message);
       throw new Error(
