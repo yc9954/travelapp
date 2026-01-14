@@ -99,10 +99,23 @@ export default function UploadScreen() {
       if (!result.canceled && result.assets[0]) {
         const videoUri = result.assets[0].uri;
         
-        // Validate video
-        if (result.assets[0].duration && result.assets[0].duration > 180) {
-          Alert.alert('Video Too Long', 'Video must be 3 minutes or less.');
-          return;
+        // Validate video duration
+        // expo-image-picker duration is in seconds, but check if it might be in milliseconds
+        if (result.assets[0].duration) {
+          let durationInSeconds = result.assets[0].duration;
+          
+          // If duration is greater than 1000, it's likely in milliseconds
+          if (durationInSeconds > 1000) {
+            durationInSeconds = durationInSeconds / 1000;
+          }
+          
+          console.log('Video duration:', durationInSeconds, 'seconds');
+          
+          // 3 minutes = 180 seconds
+          if (durationInSeconds > 180) {
+            Alert.alert('Video Too Long', 'Video must be 3 minutes or less.');
+            return;
+          }
         }
 
         setIsProcessingVideo(true);
